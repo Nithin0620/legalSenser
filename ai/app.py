@@ -9,7 +9,7 @@ app = FastAPI(title="LegalSenser AI Microservice")
 
 @app.get("/")
 def root():
-    return {"message": "AI service is running 🚀"}
+    return {"message": "AI microservice is running 🚀"}
 
 @app.post("/simplify")
 def simplify(data: dict):
