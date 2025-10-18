@@ -6,13 +6,16 @@ import Tesseract from "tesseract.js";
 import Groq from "groq-sdk";
 import dotenv from "dotenv";
 import Document from "../models/document";
+import User from "../models/user";
+import Profile from "../models/profile";
 
 dotenv.config();
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
 
-export const extractText = async (req: Request, res: Response) => {
+export const uploadDocument = async (req: Request, res: Response) => {
     try {
         const user = (req as any).user?.user?._id;
+
         if (!(req as any).file) {
             return res.status(400).json({ message: "No file uploaded" });
         }
@@ -69,6 +72,7 @@ export const extractText = async (req: Request, res: Response) => {
             temperature: 0.7,
         });
 
+
         let aiResponse = completion.choices[0]?.message?.content?.trim() || "{}";
         let parsedData: any;
 
@@ -87,6 +91,13 @@ export const extractText = async (req: Request, res: Response) => {
             processedByAI: true,
             documentType,
         });
+
+        const userObj = User.findById(user);
+        const profileId = (userObj as any).profile;
+        const profile = await Profile.updateOne(
+            { _id: profileId},
+            { $push: { "recentActivity": newDoc._id } }
+        );
 
         return res.status(201).json({
             success: true,
@@ -180,9 +191,31 @@ export const deleteDocument = async (req: Request, res: Response) => {
 };
 
 
+export const addToSavedDocs = async(req:Request , res:Response)=>{
+    try{
+        const userID = (req as any).user.user._id;
+        const {docsID} = req.body;
 
+        const user = await User.findById(userID);
+        const result  = await Profile.findByIdAndUpdate(
+            {_id : user?.profile},
+            { $push : {"savedDocuments" : docsID}}
+        );
 
+        if(!result){
+            return res.status(404).json({message:"error occured in addtosaveddocs"});
+        }
 
-
-
-
+        return res.status(200).json({
+            success:true,
+            message:"added to Saved Docs successfully",
+            data:result
+        })
+    }
+    catch(e){
+        return res.status(500).json({
+            success:false,
+            message:"Error ocured in the addToSavedDocs controller",
+        })
+    }
+}
