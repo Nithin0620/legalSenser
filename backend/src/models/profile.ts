@@ -67,4 +67,4 @@ const profileSchema = new mongoose.Schema<IProfile>({
 );
 
 
-module.exports = mongoose.model<IProfile>("Profile",profileSchema);
+export default mongoose.model<IProfile>("Profile",profileSchema);

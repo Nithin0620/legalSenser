@@ -64,4 +64,4 @@ const documentSchema = new mongoose.Schema<IDocument>({
 })
 
 
-module.exports= mongoose.model<IDocument>("Document",documentSchema);
+export default mongoose.model<IDocument>("Document",documentSchema);

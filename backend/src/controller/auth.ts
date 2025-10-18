@@ -2,9 +2,9 @@ import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import otpGenerator from "otp-generator";
-import User from "../models/User";
-import Profile from "../models/Profile";
-import Otp from "../models/Otp";
+import User from "../models/user";
+import Profile from "../models/profile";
+import Otp from "../models/otp";
 import { OAuth2Client } from "google-auth-library";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -77,13 +77,13 @@ export const login = async (req: Request, res: Response) => {
             });
         }
 
-        if (user.password !== passwordInput) {
+        if ((user as any).password !== passwordInput) {
             return res.status(400).json({
                 message: "Incorrect password"
             })
         }
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "2d" });
+        const token = jwt.sign({ id: (user as any)._id }, process.env.JWT_SECRET!, { expiresIn: "2d" });
 
         res.status(201).json({ user, token });
 
@@ -145,11 +145,11 @@ export const logout = (req :Request, res :Response) => {
 
 export const checkAuth = async (req : Request, res : Response) => {
     try {
-        if (!req.user.user._id) {
+        if (!(req as any).user.user._id) {
             return res.status(400).json({ message: "User id not found" });
         }
 
-        const user = await User.findById(req.user.user._id).populate("profile").exec();
+        const user = await User.findById((req as any).user.user._id).populate("profile").exec();
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -157,7 +157,7 @@ export const checkAuth = async (req : Request, res : Response) => {
 
         const payload = {
             user,
-            token: req.user.token,
+            token: (req as any).user.token,
         };
 
         res.status(200).json({
