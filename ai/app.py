@@ -6,13 +6,11 @@ from chat import chat_with_doc
 
 app = FastAPI(title="LegalSenser AI Microservice")
 
-# ---------- ROOT ----------
 @app.get("/")
 def root():
     return {"message": "AI microservice is running 🚀"}
 
 
-# ---------- SINGLE SIMPLIFY + SUMMARIZE ENDPOINT ----------
 @app.post("/simplify")
 async def simplify(text: str = Form(...)):
     """
@@ -28,7 +26,6 @@ async def simplify(text: str = Form(...)):
     return {"result": result}
 
 
-# ---------- COMPARE ----------
 @app.post("/compare")
 def compare(data: dict):
     """
@@ -38,7 +35,6 @@ def compare(data: dict):
     return {"result": compare_docs(data["doc1"], data["doc2"])}
 
 
-# ---------- ANALYZE RISK ----------
 @app.post("/analyze-risk")
 def analyze(data: dict):
     """
@@ -50,7 +46,6 @@ def analyze(data: dict):
     return {"result": analyze_risk(document_text, document_type)}
 
 
-# ---------- CHAT ----------
 @app.post("/chat")
 async def chat(req: Request):
     """
