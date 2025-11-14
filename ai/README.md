@@ -1,4 +1,4 @@
-🧠 LegalSenser AI Microservice
+##🧠 LegalSenser AI Microservice
 
 This repository powers the AI layer of the LegalSenser full-stack app.
 It handles document understanding, simplification, risk analysis, comparison, and contextual Q&A using modern transformer models hosted on Hugging Face Spaces.
