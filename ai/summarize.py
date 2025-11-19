@@ -3,7 +3,7 @@ import json
 from transformers import pipeline
 
 # -------- MODEL 1: Summarization --------
-model_name = "google/flan-t5-large"
+model_name = "google/flan-t5-base"
 summarize_pipe = pipeline("text2text-generation", model=model_name)
 
 def generate_summary_and_title(text: str):
