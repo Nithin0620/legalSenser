@@ -4,7 +4,13 @@ from transformers import pipeline
 
 # Using text2text model for semantic comparison
 compare_model_name = "google/flan-t5-large"
-compare_pipe = pipeline("text2text-generation", model=compare_model_name)
+compare_pipe = None
+
+def _get_compare_pipe():
+    global compare_pipe
+    if compare_pipe is None:
+        compare_pipe = pipeline("text2text-generation", model=compare_model_name)
+    return compare_pipe
 
 def compare_docs(old_text: str, new_text: str):
     """
@@ -38,7 +44,8 @@ def compare_docs(old_text: str, new_text: str):
     {new_text[:5000]}
     """
 
-    output = compare_pipe(prompt, max_length=1024, do_sample=False)[0]['generated_text']
+    pipe = _get_compare_pipe()
+    output = pipe(prompt, max_length=1024, do_sample=False)[0]['generated_text']
 
     try:
         start, end = output.find("{"), output.rfind("}")

@@ -3,6 +3,32 @@
 This repository powers the AI layer of the LegalSenser full-stack app.
 It handles document understanding, simplification, risk analysis, comparison, and contextual Q&A using modern transformer models hosted on Hugging Face Spaces.
 
+## 🚀 Quick Start (After Cloning)
+
+### 1. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Run the Server
+```bash
+cd ai
+python -m uvicorn app:app --reload --host 127.0.0.1 --port 8000
+```
+
+Or from the root directory:
+```bash
+python -m uvicorn ai.app:app --reload --host 127.0.0.1 --port 8000
+```
+
+### 3. Access the API
+- Main endpoint: http://127.0.0.1:8000
+- API Documentation: http://127.0.0.1:8000/docs
+
+**Note:** First API call will take longer as models are downloaded and cached.
+
+---
+
 ⚙️ Architecture Overview
 Frontend (React / Next.js)
           ↓

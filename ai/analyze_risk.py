@@ -4,7 +4,13 @@ from transformers import pipeline
 
 # Using a text2text model for risk analysis
 risk_model_name = "google/flan-t5-large"
-risk_pipe = pipeline("text2text-generation", model=risk_model_name)
+risk_pipe = None
+
+def _get_risk_pipe():
+    global risk_pipe
+    if risk_pipe is None:
+        risk_pipe = pipeline("text2text-generation", model=risk_model_name)
+    return risk_pipe
 
 def analyze_risk(document_text: str, document_type: str = "pdf"):
     """
@@ -42,7 +48,8 @@ def analyze_risk(document_text: str, document_type: str = "pdf"):
     {document_text[:7000]}
     """
 
-    output = risk_pipe(prompt, max_length=1024, do_sample=False)[0]['generated_text']
+    pipe = _get_risk_pipe()
+    output = pipe(prompt, max_length=1024, do_sample=False)[0]['generated_text']
 
     try:
         start, end = output.find("{"), output.rfind("}")

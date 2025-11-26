@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form
+from fastapi import FastAPI, Form, Request
 from ai_legal_simplify import analyze_contract
 from compare import compare_docs
 from analyze_risk import analyze_risk

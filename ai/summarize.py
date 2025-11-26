@@ -4,7 +4,13 @@ from transformers import pipeline
 
 # -------- MODEL 1: Summarization --------
 model_name = "google/flan-t5-base"
-summarize_pipe = pipeline("text2text-generation", model=model_name)
+summarize_pipe = None
+
+def _get_summarize_pipe():
+    global summarize_pipe
+    if summarize_pipe is None:
+        summarize_pipe = pipeline("text2text-generation", model=model_name)
+    return summarize_pipe
 
 def generate_summary_and_title(text: str):
     """
@@ -26,7 +32,8 @@ def generate_summary_and_title(text: str):
     {text[:5000]}
     """
 
-    output = summarize_pipe(prompt, max_length=512, do_sample=False)[0]['generated_text']
+    pipe = _get_summarize_pipe()
+    output = pipe(prompt, max_length=512, do_sample=False)[0]['generated_text']
 
     try:
         start, end = output.find("{"), output.rfind("}")

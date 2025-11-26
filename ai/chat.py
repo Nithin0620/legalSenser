@@ -3,7 +3,13 @@ from transformers import pipeline
 
 # Initialize model only once (keep lightweight for Hugging Face Space)
 qa_model_name = "google/flan-t5-large"
-qa_pipe = pipeline("text2text-generation", model=qa_model_name)
+qa_pipe = None
+
+def _get_qa_pipe():
+    global qa_pipe
+    if qa_pipe is None:
+        qa_pipe = pipeline("text2text-generation", model=qa_model_name)
+    return qa_pipe
 
 def chat_with_doc(context: str, current_question: str, previous_questions: list = None):
     """
@@ -58,5 +64,6 @@ def chat_with_doc(context: str, current_question: str, previous_questions: list 
     """
 
     # Run the model
-    output = qa_pipe(prompt, max_length=512, do_sample=False)[0]['generated_text']
+    pipe = _get_qa_pipe()
+    output = pipe(prompt, max_length=512, do_sample=False)[0]['generated_text']
     return output.strip()

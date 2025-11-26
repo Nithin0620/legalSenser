@@ -4,7 +4,13 @@ from transformers import pipeline
 
 # -------- MODEL 2: Simplification --------
 simplify_model_name = "google/flan-t5-large"
-simplify_pipe = pipeline("text2text-generation", model=simplify_model_name)
+simplify_pipe = None
+
+def _get_simplify_pipe():
+    global simplify_pipe
+    if simplify_pipe is None:
+        simplify_pipe = pipeline("text2text-generation", model=simplify_model_name)
+    return simplify_pipe
 
 def simplify_document(text: str):
     """
@@ -26,7 +32,8 @@ def simplify_document(text: str):
     {text[:5000]}
     """
 
-    output = simplify_pipe(prompt, max_length=512, do_sample=False)[0]['generated_text']
+    pipe = _get_simplify_pipe()
+    output = pipe(prompt, max_length=512, do_sample=False)[0]['generated_text']
 
     try:
         start, end = output.find("{"), output.rfind("}")
