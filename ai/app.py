@@ -1,82 +1,81 @@
-from fastapi import FastAPI, Form, Request
-from ai_legal_simplify import analyze_contract
+from fastapi import FastAPI, Request
+from pydantic import BaseModel
+from simplify import simplify_document
 from compare import compare_docs
 from analyze_risk import analyze_risk
 from chat import chat_with_doc
+from summarize import generate_summary_and_title
 
 app = FastAPI(title="LegalSenser AI Microservice")
 
+class SimplifyRequest(BaseModel):
+    text: str
+
+class SummarizeRequest(BaseModel):
+    text: str
+
+class CompareRequest(BaseModel):
+    doc1: str
+    doc2: str
+
+class RiskRequest(BaseModel):
+    text: str
+
+class ChatRequest(BaseModel):
+    context: str
+    question: str
+    history: list = []
+
 @app.get("/")
 def root():
-    return {"message": "AI microservice is running 🚀"}
+    return {"status": "ok", "message": "LegalSenser AI is running"}
 
 
 @app.post("/simplify")
-async def simplify(text: str = Form(...)):
+async def simplify(request: SimplifyRequest):
     """
-    Combines summarization + simplification into a single unified AI analysis.
-    Returns:
-    {
-      "title": "...",
-      "summary": "...",
-      "simplifiedPoints": [...]
-    }
+    Summarizes and simplifies legal document.
+    Returns title, summary paragraph, and bullet points.
     """
-    result = analyze_contract(text)
-    return {"result": result}
+    result = simplify_document(request.text)
+    return result
 
 
 @app.post("/compare")
-def compare(data: dict):
+async def compare(request: CompareRequest):
     """
-    Compares two documents (old vs new) and highlights added/removed/modified clauses.
-    Input: {"doc1": "...", "doc2": "..."}
+    Compares two documents and returns summary of changes.
     """
-    return {"result": compare_docs(data["doc1"], data["doc2"])}
+    result = compare_docs(request.doc1, request.doc2)
+    return result
 
 
 @app.post("/analyze-risk")
-def analyze(data: dict):
+async def analyze(request: RiskRequest):
     """
-    Performs clause-level risk analysis.
-    Input: {"text": "...", "document_type": "pdf|docx|image"} (document_type optional)
+    Analyzes document for risks and provides recommendations.
     """
-    document_text = data["text"]
-    document_type = data.get("document_type", "pdf")
-    return {"result": analyze_risk(document_text, document_type)}
+    result = analyze_risk(request.text)
+    return result
 
 
 @app.post("/chat")
-async def chat(req: Request):
+async def chat(request: ChatRequest):
     """
-    Handles document-based Q&A chat.
-
-    Input:
-    {
-      "context": "Full document text",
-      "current_question": "User's latest question",
-      "previous_questions": [
-          {"user": "previous question", "response": "previous answer"},
-          ...
-      ]
-    }
-
-    Returns:
-      {"answer": "Direct, concise AI-generated answer"}
+    Q&A with document context.
     """
     try:
-        data = await req.json()
-        context = data.get("context", "")
-        current_question = data.get("current_question", "")
-        previous_questions = data.get("previous_questions", [])
-
-        # Validate types (extra safety)
-        if not isinstance(previous_questions, list):
-            previous_questions = []
-
-        answer = chat_with_doc(context, current_question, previous_questions)
+        answer = chat_with_doc(request.context, request.question, request.history)
         return {"answer": answer}
-
     except Exception as e:
-        print(f"❌ Chat endpoint error: {e}")
-        return {"error": "An error occurred while processing your request."}
+        return {"error": str(e)}
+
+
+@app.post("/summarize")
+async def summarize(request: SummarizeRequest):
+    """
+    Summarizes text and generates a title.
+    Returns title and summary.
+    """
+    result = generate_summary_and_title(request.text)
+    return result

@@ -1,69 +1,76 @@
-# chat_with_doc.py
+# chat.py
+"""
+Document Q&A Chat Module
+Conversational question-answering with document context and memory.
+"""
 from transformers import pipeline
+from typing import Dict, List
+import re
 
-# Initialize model only once (keep lightweight for Hugging Face Space)
-qa_model_name = "google/flan-t5-large"
-qa_pipe = None
+# Model: Flan-T5 for better conversational understanding
+QA_MODEL = "google/flan-t5-base"
+_qa_pipe = None
 
-def _get_qa_pipe():
-    global qa_pipe
-    if qa_pipe is None:
-        qa_pipe = pipeline("text2text-generation", model=qa_model_name)
-    return qa_pipe
+def _get_qa_pipeline():
+    """Lazy load the Q&A pipeline."""
+    global _qa_pipe
+    if _qa_pipe is None:
+        _qa_pipe = pipeline("text2text-generation", model=QA_MODEL)
+    return _qa_pipe
 
-def chat_with_doc(context: str, current_question: str, previous_questions: list = None):
+def chat_with_doc(context: str, question: str, history: List[Dict] = None) -> str:
     """
-    Handles contextual Q&A over a legal document.
-
+    Answer questions based on document context with conversation memory.
+    
     Args:
-        context (str): Full document text.
-        current_question (str): Latest user question.
-        previous_questions (list): List of dicts [{user: "...", response: "..."}].
-
+        context: Full document text
+        question: User's question
+        history: List of previous Q&A pairs [{"question": "...", "answer": "..."}, ...]
+        
     Returns:
-        str: Concise AI-generated answer (string only).
+        str: Answer to the question (plain text, not wrapped in JSON)
     """
+    pipe = _get_qa_pipeline()
+    
+    # Limit context to avoid memory issues
+    limited_context = context[:2000] if len(context) > 2000 else context
+    
+    # Build conversation history
+    history_context = ""
+    if history and isinstance(history, list) and len(history) > 0:
+        history_lines = []
+        for h in history[-3:]:  # Last 3 exchanges
+            q = h.get('question', '')
+            a = h.get('answer', '')
+            if q and a:
+                history_lines.append(f"Q: {q}\nA: {a}")
+        if history_lines:
+            history_context = "Previous conversation:\n" + "\n\n".join(history_lines) + "\n\n"
+    
+    # Create a focused prompt
+    prompt = f"""Based on the following document, answer the question directly and concisely.
 
-    # Build readable conversation history
-    conversation_log = ""
-    if previous_questions and isinstance(previous_questions, list):
-        formatted_history = []
-        for turn in previous_questions[-5:]:  # limit to last 5 exchanges
-            user_q = turn.get("user", "").strip()
-            ai_a = turn.get("response", "").strip()
-            if user_q and ai_a:
-                formatted_history.append(f"User: {user_q}\nAssistant: {ai_a}")
-        conversation_log = "\n\n".join(formatted_history)
-    else:
-        conversation_log = "No prior conversation history."
+{history_context}Document:
+{limited_context}
 
-    # Construct better prompt
-    prompt = f"""
-    You are a professional, concise, and trustworthy **legal assistant** helping users interpret documents.
+Question: {question}
 
-    📄 **Document Context:**
-    {context[:5000]}
-
-    💬 **Conversation History:**
-    {conversation_log}
-
-    ❓ **Current Question:**
-    {current_question}
-
-    🎯 **Your Task:**
-    Answer the user's latest question *strictly based on the document and conversation history*.
-
-    Rules:
-    1. Begin with a **direct answer** (1–2 lines).
-    2. Optionally follow with a **short, clear explanation (1–2 lines)**.
-    3. If the document doesn’t provide enough detail, respond with:
-    → "The document does not specify this information."
-    4. Avoid greetings, disclaimers, or repetition.
-
-    Now, provide your answer below:
-    """
-
-    # Run the model
-    pipe = _get_qa_pipe()
-    output = pipe(prompt, max_length=512, do_sample=False)[0]['generated_text']
-    return output.strip()
+Answer (be specific and direct):"""
+    
+    try:
+        # Use AI model for question answering
+        result = pipe(prompt, max_length=200, min_length=10, do_sample=False, temperature=0.3)
+        answer = result[0]['generated_text'].strip()
+        
+        # Clean up answer
+        if not answer or len(answer) < 3:
+            return "I couldn't find enough information in the document to answer that question."
+        
+        # Remove any repetition of the question
+        if question.lower() in answer.lower()[:len(question)+10]:
+            answer = answer[len(question):].strip(":- ")
+        
+        return answer
+        
+    except Exception as e:
+        return "I encountered an error processing your question. Please try rephrasing it."
