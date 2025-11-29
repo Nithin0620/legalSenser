@@ -1,95 +1,50 @@
 # summarize.py
 """
-Document Summarization Module
-Uses AI to generate title and summary from legal documents.
+Document Summarization Module using Groq API
+Generates title and summary for legal documents.
 """
-import json
-import re
-from transformers import pipeline
-from typing import Dict
+from groq_helper import call_groq_api, SUMMARIZE_SYSTEM_PROMPT
 
-# Smarter model for summarization + legal understanding
-SUMMARY_MODEL = "Qwen/Qwen2.5-3B-Instruct"
-_summarize_pipe = None
-
-def _get_summarize_pipe():
-    """Lazy load the summarization pipeline."""
-    global _summarize_pipe
-    if _summarize_pipe is None:
-        _summarize_pipe = pipeline(
-            "text2text-generation",
-            model=SUMMARY_MODEL,
-            truncation=True  # safe context handling
-            # ❌ Removed device_map to avoid accelerate error on local CPU
-        )
-    return _summarize_pipe
-
-
-def generate_summary_and_title(text: str) -> Dict:
+def generate_summary_and_title(text: str):
     """
-    Generate title and summary from legal document using AI reasoning.
-
-    Args:
-        text: Document text to summarize
-        
-    Returns:
-        { "title": "...", "summary": "..." }
+    Summarize the document and generate a clear title using Groq API.
+    Returns: { "title": "...", "summary": "..." }
     """
-    pipe = _get_summarize_pipe()
-    truncated_text = text[:2500] if len(text) > 2500 else text
+    # Limit text to reasonable length for API processing
+    truncated_text = text[:8000] if len(text) > 8000 else text
+    
+    # Build user prompt with the document text
+    user_prompt = f"""Please analyze the following legal document and provide a title and summary.
 
-    prompt = f"""
-You are a professional legal document summarizer AI.
-
-Tasks:
-1. Generate a clear, meaningful document TITLE.
-2. Produce a concise, accurate SUMMARY (40–120 words).
-
-Return strictly in JSON with this exact format:
-
-{{
-  "title": "...",
-  "summary": "..."
-}}
-
-Rules:
-- Do NOT repeat phrases or give anything outside JSON
-- No prefixes like "Here's the summary"
-- Ensure valid JSON output
-- Use legal understanding for title and summary
-
-Document Text:
+DOCUMENT TEXT:
 {truncated_text}
 
-JSON Output:
-"""
-
-    # Model call
-    ai_raw = pipe(
-        prompt,
-        max_length=250,
-        do_sample=False,
-        temperature=0.2,
-        repetition_penalty=1.3  # prevents looping & junk repeats
-    )[0]['generated_text']
-
-    # Extract JSON safely
-    json_match = re.search(r'\{.*\}', ai_raw, re.DOTALL)
-    if not json_match:
-        return {"title": "Summary Generation Failed", "summary": ""}
-
-    try:
-        result = json.loads(json_match.group())
-    except json.JSONDecodeError:
-        return {"title": "Summary Generation Error", "summary": ""}
-
-    # Safety trimming
-    result["title"] = result.get("title","").strip()
-    result["summary"] = result.get("summary","").strip()
-
-    if len(result["title"]) > 65:
-        result["title"] = result["title"][:62] + "..."
-    if len(result["summary"]) > 500:
-        result["summary"] = result["summary"][:497] + "..."
-
-    return result
+Generate a concise title (max 60 chars) and a comprehensive summary paragraph (100-150 words) that captures the key purpose, parties, and main terms of this document."""
+    
+    # Call Groq API with structured output format
+    response = call_groq_api(
+        api_name="summarize",
+        system_prompt=SUMMARIZE_SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        response_format={"type": "json_object"},
+        temperature=0.3,
+        max_tokens=800
+    )
+    
+    # Return response or fallback
+    if "error" in response:
+        # Fallback to simple extraction
+        words = text.split()[:10]
+        title = " ".join(words) + "..." if len(words) == 10 else " ".join(words)
+        if len(title) > 60:
+            title = title[:57] + "..."
+        
+        return {
+            "title": title,
+            "summary": f"Error generating summary: {response['error']}"
+        }
+    
+    return {
+        "title": response.get("title", "Untitled Document"),
+        "summary": response.get("summary", "Summary not available")
+    }

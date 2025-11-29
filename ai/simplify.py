@@ -1,77 +1,76 @@
-from transformers import pipeline
+# analyze_risk.py
+"""
+Legal Text Simplification Module using Groq API
+Converts complex legal text into plain English with risk-tagged highlights.
+"""
+from groq_helper import call_groq_api, SIMPLIFY_SYSTEM_PROMPT
 from typing import Dict, List
-import re
-
-# Better instruction-following model for legal simplification + reasoning
-SIMPLIFY_MODEL = "mistralai/Mistral-7B-Instruct-v0.2"
-_simplify_pipe = None
-
-def _get_simplify_pipeline():
-    """Lazy load text generation pipeline."""
-    global _simplify_pipe
-    if _simplify_pipe is None:
-        _simplify_pipe = pipeline(
-            "text-generation",
-            model=SIMPLIFY_MODEL,
-            torch_dtype="auto",
-            device_map="auto",
-            truncation=True
-        )
-    return _simplify_pipe
 
 def simplify_document(text: str) -> Dict:
     """
-    AI does everything:
-    - Simplifies legal text
-    - Extracts key bullet points
-    - Detects risky clauses
-    - Classifies risk level
-    - Provides AI reasoning for each highlight
+    Simplifies legal text into plain English with risk-tagged highlights using Groq API.
+    
+    Args:
+        text: Legal document text to simplify
+        
+    Returns:
+        {
+            "simplifiedText": "...",
+            "simplifiedPoints": ["...", "..."],
+            "riskHighlights": [
+                {"text": "...", "risk": "High|Medium|Low", "reason": "..."}
+            ]
+        }
     """
-    pipe = _get_simplify_pipeline()
-    truncated_text = text[:3500]
+    # Limit text for API processing
+    truncated_text = text[:8000] if len(text) > 8000 else text
+    
+    # Build comprehensive user prompt
+    user_prompt = f"""Simplify the following legal document into plain English that anyone can understand.
 
-    # Full legal-aware prompt
-    prompt = f"""
-You are a legal AI assistant.
+DOCUMENT TEXT:
+{truncated_text}
 
-Perform the following tasks on the legal text below:
+SIMPLIFICATION REQUIREMENTS:
+1. Create a plain English paragraph summary (200-300 words) that explains what this document is about, who the parties are, and what the main terms mean in everyday language
+2. Extract 5-7 key points as bullet points in simple language - avoid legal jargon
+3. Identify 3-5 risky or important clauses with:
+   - The original clause text (first 150 characters)
+   - Risk level (High/Medium/Low)
+   - Plain English explanation of why it's risky or important
 
-1. Rewrite the entire document into a clean, easy to understand plain English paragraph as to explain to a 5 year old child.
-2. Extract 5–7 or more key points as short bullet points.
-3. Identify 4–6 or multiple clauses that contain legal risk.
-4. For each risky clause:
-   - Return the exact text as a highlight
-   - Classify risk as High / Medium / Low
-   - Give a short reason WHY it is risky
+Focus on:
+- Making complex terms understandable
+- Highlighting obligations and restrictions
+- Explaining penalties and consequences
+- Clarifying rights and responsibilities
+- Identifying potential risks in plain language
 
-Make sure your answer must be in strict JSON format like below:
-
-{{
-  "simplifiedText": "...",
-  "simplifiedPoints": ["...", "..."],
-  "riskHighlights": [
-      {{"text": "...", "risk": "High|Medium|Low", "reason": "..."}}
-  ]
-}}
-
-Legal Text:
-{text}
-
-JSON Output:
-"""
-
-    response = pipe(prompt, max_new_tokens=600, do_sample=False)[0]["generated_text"]
-
-    # Extract JSON from model output
-    json_match = re.search(r'\{.*\}', response, re.DOTALL)
-    if not json_match:
-        return {"simplifiedText": "", "simplifiedPoints": [], "riskHighlights": []}
-
-    import json
-    try:
-        result = json.loads(json_match.group())
-    except:
-        return {"simplifiedText": "", "simplifiedPoints": [], "riskHighlights": []}
-
-    return result
+Use everyday words and short sentences. Avoid legal terminology unless necessary."""
+    
+    # Call Groq API with structured output
+    response = call_groq_api(
+        api_name="simplify",
+        system_prompt=SIMPLIFY_SYSTEM_PROMPT,
+        user_prompt=user_prompt,
+        response_format={"type": "json_object"},
+        temperature=0.3,
+        max_tokens=2500
+    )
+    
+    # Handle errors
+    if "error" in response:
+        # Fallback: extract some basic points
+        sentences = [s.strip() for s in text.split('.') if len(s.strip()) > 20]
+        return {
+            "simplifiedText": f"Error simplifying document: {response['error']}",
+            "simplifiedPoints": sentences[:5],
+            "riskHighlights": []
+        }
+    
+    # Return structured response with defaults
+    return {
+        "simplifiedText": response.get("simplifiedText", "Simplified text not available"),
+        "simplifiedPoints": response.get("simplifiedPoints", []),
+        "riskHighlights": response.get("riskHighlights", [])
+    }
