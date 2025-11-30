@@ -4,7 +4,9 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import path from "path";
 
-import dbConnect from "./config/dbConnect";
+import dbConnect from "./src/config/dbConnect";
+import authRoutes from "./src/routes/auth.routes";
+import aiRoutes from "./src/routes/ai.routes";
 
 const app = express();
 
@@ -29,6 +31,9 @@ app.use(
   })
 );
 
+// API Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.send(

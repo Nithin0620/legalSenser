@@ -19,4 +19,4 @@ router.post("/logout", logout);
 
 router.post("/checkauth",protectRoute,checkAuth)
 
-module.exports = router;
+export default router;

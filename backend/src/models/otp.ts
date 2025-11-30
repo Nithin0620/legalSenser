@@ -1,20 +1,14 @@
 import mongoose, { Document, Schema } from "mongoose";
-import twilio from "twilio";
-
-const accountSid = process.env.TWILIO_ACCOUNT_SID!;
-const authToken = process.env.TWILIO_AUTH_TOKEN!;
-
-const client = twilio(accountSid, authToken);
 
 interface IOtp extends Document {
-    mobileNo: Number;
+    email: string;
     otp: string;
     createdAt: Date;
 }
 
 const otpSchema = new mongoose.Schema<IOtp>({
-    mobileNo: {
-        type: Number,
+    email: {
+        type: String,
         required: true,
     },
     otp: {
@@ -24,23 +18,11 @@ const otpSchema = new mongoose.Schema<IOtp>({
     createdAt: {
         type: Date,
         default: Date.now,
-        expires: 5 * 60,
+        expires: 10 * 60, // OTP expires in 10 minutes
     },
 });
 
-otpSchema.pre("save", async function (next) {
-    if (this.isNew) {
-        try {
-            await client.messages.create({
-                body: `Your OTP is: ${this.otp}`,
-                to: `+91${this.mobileNo}`,
-                from: "+917428662179",
-            });
-        } catch (err) {
-            console.error("Error sending OTP:", err);
-        }
-    }
-    next();
-});
+// Add index for faster queries
+otpSchema.index({ email: 1, createdAt: -1 });
 
 export default mongoose.model<IOtp>("Otp", otpSchema);

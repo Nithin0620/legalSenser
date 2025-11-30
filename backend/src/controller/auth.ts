@@ -6,23 +6,50 @@ import User from "../models/user";
 import Profile from "../models/profile";
 import Otp from "../models/otp";
 import { OAuth2Client } from "google-auth-library";
+import { sendOTPEmail } from "../services/emailService";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 
 export const sendOtp = async (req: Request, res: Response) => {
     try {
-        const { mobileNo } = req.body;
+        const { email } = req.body;
 
-        const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, lowerCaseAlphabets: false, specialChars: false });
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
+        }
 
-        await Otp.create({ mobileNo, otp });
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: "Invalid email format" });
+        }
 
-        console.log(`OTP for ${mobileNo} is ${otp}`);
+        const otp = otpGenerator.generate(6, { 
+            upperCaseAlphabets: false, 
+            lowerCaseAlphabets: false, 
+            specialChars: false,
+            digits: true
+        });
 
-        res.status(200).json({ message: "OTP sent successfully" });
+        // Save OTP to database
+        await Otp.create({ email, otp });
+
+        // Send OTP via email
+        await sendOTPEmail(email, otp);
+
+        console.log(`OTP for ${email} is ${otp}`);
+
+        res.status(200).json({ 
+            success: true,
+            message: "OTP sent successfully to your email" 
+        });
     } catch (err: any) {
-        res.status(500).json({ message: err.message });
+        console.error("Error in sendOtp:", err);
+        res.status(500).json({ 
+            success: false,
+            message: err.message || "Failed to send OTP" 
+        });
     }
 };
 
@@ -30,20 +57,39 @@ export const signupWithOtp = async (req: Request, res: Response) => {
     try {
         const { name, email, mobileNo, password, otpInput } = req.body;
 
-        const otpRecord = await Otp.findOne({ mobileNo }).sort({ createdAt: -1 });
-        if (!otpRecord || otpRecord.otp !== otpInput) {
-            return res.status(400).json({ message: "Invalid or expired OTP" });
+        if (!name || !email || !password || !otpInput) {
+            return res.status(400).json({ 
+                success: false,
+                message: "Name, email, password, and OTP are required" 
+            });
         }
 
+        // Find the most recent OTP for this email
+        const otpRecord = await Otp.findOne({ email }).sort({ createdAt: -1 });
+        
+        if (!otpRecord || otpRecord.otp !== otpInput) {
+            return res.status(400).json({ 
+                success: false,
+                message: "Invalid or expired OTP" 
+            });
+        }
+
+        // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ message: "User already exists" });
+            return res.status(400).json({ 
+                success: false,
+                message: "User with this email already exists" 
+            });
         }
 
+        // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Create profile
         const profile = await Profile.create({ name, email, mobileNo });
 
+        // Create user
         const user = await User.create({
             name,
             email,
@@ -53,11 +99,24 @@ export const signupWithOtp = async (req: Request, res: Response) => {
             profile: profile._id,
         });
 
+        // Generate JWT token
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "2d" });
 
-        res.status(201).json({ user, token });
+        // Delete used OTP
+        await Otp.deleteOne({ _id: otpRecord._id });
+
+        res.status(201).json({ 
+            success: true,
+            message: "User registered successfully",
+            user, 
+            token 
+        });
     } catch (err: any) {
-        res.status(500).json({ message: err.message });
+        console.error("Error in signupWithOtp:", err);
+        res.status(500).json({ 
+            success: false,
+            message: err.message || "Failed to register user" 
+        });
     }
 };
 
@@ -66,9 +125,9 @@ export const login = async (req: Request, res: Response) => {
         const { uniq, passwordInput } = req.body;
 
         let user;
-        user = User.findOne({ email: uniq });
+        user = await User.findOne({ email: uniq });
         if (!user) {
-            user = User.findOne({ mobileNo: uniq });
+            user = await User.findOne({ mobileNo: uniq });
         }
 
         if (!user) {
@@ -77,16 +136,23 @@ export const login = async (req: Request, res: Response) => {
             });
         }
 
-        if ((user as any).password !== passwordInput) {
+        if (!user.password) {
             return res.status(400).json({
-                message: "Incorrect password"
-            })
+                message: "Invalid login method. Please use Google Sign-In."
+            });
         }
 
-        const token = jwt.sign({ id: (user as any)._id }, process.env.JWT_SECRET!, { expiresIn: "2d" });
+        const isPasswordValid = await bcrypt.compare(passwordInput, user.password);
+        
+        if (!isPasswordValid) {
+            return res.status(400).json({
+                message: "Incorrect password"
+            });
+        }
 
-        res.status(201).json({ user, token });
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "2d" });
 
+        res.status(200).json({ user, token });
 
     }
     catch (err: any) {
