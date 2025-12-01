@@ -7,6 +7,7 @@ import path from "path";
 import dbConnect from "./src/config/dbConnect";
 import authRoutes from "./src/routes/auth.routes";
 import aiRoutes from "./src/routes/ai.routes";
+import documentRoutes from "./src/routes/document.routes";
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use(
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/documents", documentRoutes);
 
 app.get("/", (req: Request, res: Response) => {
   res.send(

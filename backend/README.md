@@ -175,7 +175,7 @@ Analyze document for potential risks
 Q&A with document context
 ```json
 {
-  "context": "Document content for context...",
+  "documentId": "document_id_here",
   "question": "Your question here?",
   "history": []
 }
@@ -191,6 +191,8 @@ Q&A with document context
   }
 }
 ```
+
+**Note:** The `history` array is optional. Pass previous conversation messages to maintain context across multiple questions.
 
 ---
 

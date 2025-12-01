@@ -1,0 +1,5 @@
+# Uploads Directory
+
+This directory is used for temporary file storage during document uploads.
+
+Files are automatically deleted after text extraction.
