@@ -1,10 +1,8 @@
-import { Request, Response } from "express";
-
+import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import User from "../models/user"
+import User from "../models/user";
 
-
-export const protectRoute = async (req : Request, res:Response, next:any) => {
+export const protectRoute = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const token = req.cookies.jwt;
 
@@ -16,7 +14,17 @@ export const protectRoute = async (req : Request, res:Response, next:any) => {
             });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            console.error("JWT_SECRET not configured in environment");
+            return res.status(500).json({
+                success: false,
+                code: "SERVER_CONFIG",
+                message: "Server misconfiguration"
+            });
+        }
+
+        const decoded = jwt.verify(token, secret);
 
         if (!decoded) {
             return res.status(401).json({
@@ -26,7 +34,19 @@ export const protectRoute = async (req : Request, res:Response, next:any) => {
             });
         }
 
-        const user = await User.findById(decoded.userId).select("-password");
+        // jwt.sign uses payload { id: user._id } in auth controller
+        const payload = decoded as jwt.JwtPayload | string;
+        const userId = typeof payload === "object" && (payload as any).id ? (payload as any).id : (payload as any).userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                code: "INVALID_TOKEN_PAYLOAD",
+                message: "Invalid token payload"
+            });
+        }
+
+        const user = await User.findById(userId).select("-password");
 
         if (!user) {
             return res.status(404).json({
@@ -36,7 +56,8 @@ export const protectRoute = async (req : Request, res:Response, next:any) => {
             });
         }
 
-        req.user = { user, token };
+        // attach to request (typed as any to avoid augmentation here)
+        (req as any).user = { user, token };
         next();
     } catch (e:any) {
 
