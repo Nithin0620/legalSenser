@@ -8,8 +8,11 @@ import Otp from "../models/otp";
 import { OAuth2Client } from "google-auth-library";
 import { sendOTPEmail } from "../services/emailService";
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
+const client = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI
+);
 
 export const sendOtp = async (req: Request, res: Response) => {
     try {
@@ -25,9 +28,9 @@ export const sendOtp = async (req: Request, res: Response) => {
             return res.status(400).json({ message: "Invalid email format" });
         }
 
-        const otp = otpGenerator.generate(6, { 
-            upperCaseAlphabets: false, 
-            lowerCaseAlphabets: false, 
+        const otp = otpGenerator.generate(6, {
+            upperCaseAlphabets: false,
+            lowerCaseAlphabets: false,
             specialChars: false,
             digits: true
         });
@@ -40,15 +43,15 @@ export const sendOtp = async (req: Request, res: Response) => {
 
         console.log(`OTP for ${email} is ${otp}`);
 
-        res.status(200).json({ 
+        res.status(200).json({
             success: true,
-            message: "OTP sent successfully to your email" 
+            message: "OTP sent successfully to your email"
         });
     } catch (err: any) {
         console.error("Error in sendOtp:", err);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            message: err.message || "Failed to send OTP" 
+            message: err.message || "Failed to send OTP"
         });
     }
 };
@@ -58,28 +61,28 @@ export const signupWithOtp = async (req: Request, res: Response) => {
         const { name, email, mobileNo, password, otpInput } = req.body;
 
         if (!name || !email || !password || !otpInput) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 success: false,
-                message: "Name, email, password, and OTP are required" 
+                message: "Name, email, password, and OTP are required"
             });
         }
 
         // Find the most recent OTP for this email
         const otpRecord = await Otp.findOne({ email }).sort({ createdAt: -1 });
-        
+
         if (!otpRecord || otpRecord.otp !== otpInput) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 success: false,
-                message: "Invalid or expired OTP" 
+                message: "Invalid or expired OTP"
             });
         }
 
         // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 success: false,
-                message: "User with this email already exists" 
+                message: "User with this email already exists"
             });
         }
 
@@ -105,17 +108,17 @@ export const signupWithOtp = async (req: Request, res: Response) => {
         // Delete used OTP
         await Otp.deleteOne({ _id: otpRecord._id });
 
-        res.status(201).json({ 
+        res.status(201).json({
             success: true,
             message: "User registered successfully",
-            user, 
-            token 
+            user,
+            token
         });
     } catch (err: any) {
         console.error("Error in signupWithOtp:", err);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            message: err.message || "Failed to register user" 
+            message: err.message || "Failed to register user"
         });
     }
 };
@@ -143,7 +146,7 @@ export const login = async (req: Request, res: Response) => {
         }
 
         const isPasswordValid = await bcrypt.compare(passwordInput, user.password);
-        
+
         if (!isPasswordValid) {
             return res.status(400).json({
                 message: "Incorrect password"
@@ -164,6 +167,11 @@ export const login = async (req: Request, res: Response) => {
 export const googleLogin = async (req: Request, res: Response) => {
     try {
         const { idToken } = req.body;
+        console.log("Received idToken from frontend");
+
+        if (!idToken) {
+            return res.status(400).json({ message: "Google ID token is required" });
+        }
 
         const ticket = await client.verifyIdToken({
             idToken,
@@ -179,6 +187,7 @@ export const googleLogin = async (req: Request, res: Response) => {
 
         if (!user) {
             const profile = await Profile.create({ name, email });
+
             user = await User.create({
                 name,
                 email,
@@ -189,27 +198,34 @@ export const googleLogin = async (req: Request, res: Response) => {
             });
         }
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "2d" });
+        const token = jwt.sign(
+            { id: user._id },
+            process.env.JWT_SECRET!,
+            { expiresIn: "2d" }
+        );
 
         res.status(200).json({ user, token });
-    } catch (err: any) {
+
+    }
+    catch (err: any) {
+        console.error("Google login error:", err.response?.data || err);
         res.status(500).json({ message: err.message });
     }
 };
 
-export const logout = (req :Request, res :Response) => {
-  try {
-      res.cookie("jwt", "", { maxAge: 0 });
-      res.status(200).json({ success:true,message: "Logged out successfully" });
-   }
-   catch (error :any) {
-      console.log("Error in logout controller", error.message);
-      res.status(500).json({success:false, message: "Internal Server Error" });
-   }
+export const logout = (req: Request, res: Response) => {
+    try {
+        res.cookie("jwt", "", { maxAge: 0 });
+        res.status(200).json({ success: true, message: "Logged out successfully" });
+    }
+    catch (error: any) {
+        console.log("Error in logout controller", error.message);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
 };
 
 
-export const checkAuth = async (req : Request, res : Response) => {
+export const checkAuth = async (req: Request, res: Response) => {
     try {
         if (!(req as any).user.user._id) {
             return res.status(400).json({ message: "User id not found" });
@@ -231,7 +247,7 @@ export const checkAuth = async (req : Request, res : Response) => {
             message: "Successfully checked",
             data: payload,
         });
-    } catch (error : any) {
+    } catch (error: any) {
         console.log("Error in checkAuth controller", error.message);
         res.status(500).json({ message: "Internal Server Error" });
     }

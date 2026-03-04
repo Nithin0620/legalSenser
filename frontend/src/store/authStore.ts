@@ -81,6 +81,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loginWithGoogle: async (idToken: string) => {
+        console.log("..",idToken)
         set({ isLoading: true, error: null });
         try {
           const response = await api.post('/auth/login/google', { idToken });
