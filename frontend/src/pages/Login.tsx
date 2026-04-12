@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useGoogleLogin } from "@react-oauth/google";
-
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 
 // Google Icon Component
 const GoogleIcon = () => (
@@ -84,10 +84,8 @@ export default function Login() {
   const displayError = localError || error;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 flex items-center justify-center p-4">
-      {/* Animated background elements */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl opacity-20 animate-pulse"></div>
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl opacity-20 animate-pulse"></div>
+    <div className="min-h-screen flex items-center justify-center p-4 relative z-0">
+      <AnimatedBackground />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

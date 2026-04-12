@@ -9,10 +9,15 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
+import Documents from "./pages/Documents";
+import DocumentDetail from "./pages/DocumentDetail";
+import Compare from "./pages/Compare";
 import Chat from "./pages/Chat";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+
+import { AnimatedBackground } from "./components/AnimatedBackground";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +27,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <AnimatedBackground />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
@@ -29,7 +35,11 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/upload" element={<Upload />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/document/:id" element={<DocumentDetail />} />
+            <Route path="/compare" element={<Compare />} />
             <Route path="/chat" element={<Chat />} />
+            <Route path="/chat/:documentId" element={<Chat />} />
             <Route path="/history" element={<History />} />
             <Route path="/settings" element={<Settings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

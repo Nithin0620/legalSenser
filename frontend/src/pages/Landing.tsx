@@ -30,7 +30,7 @@ const features = [
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen relative z-0">
       <Navbar />
       
       {/* Hero Section */}

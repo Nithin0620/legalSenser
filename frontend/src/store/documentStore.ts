@@ -32,6 +32,7 @@ interface DocumentState {
   
   // History actions
   fetchRecentActivity: () => Promise<void>;
+  fetchAllHistory: () => Promise<void>;
   
   setError: (error: string | null) => void;
 }
@@ -171,12 +172,12 @@ export const useDocumentStore = create<DocumentState>((set) => ({
     }
   },
 
-  compare: async (doc1: string, doc2: string, title?: string) => {
+  compare: async (doc1Id: string, doc2Id: string, title?: string) => {
     set({ isLoading: true, error: null });
     try {
       const response = await api.post('/ai/compare', {
-        doc1,
-        doc2,
+        documentId1: doc1Id,
+        documentId2: doc2Id,
         title,
       });
       set({ isLoading: false });
@@ -216,6 +217,19 @@ export const useDocumentStore = create<DocumentState>((set) => ({
       set({ recentActivity: response.data.recentActivity });
     } catch (err) {
       // Silently fail for activity fetch
+    }
+  },
+
+  fetchAllHistory: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await api.get('/ai/history');
+      set({ recentActivity: response.data.data, isLoading: false });
+    } catch (err: any) {
+      set({
+        isLoading: false,
+        error: err.response?.data?.message || 'Failed to fetch history',
+      });
     }
   },
 
