@@ -10,6 +10,11 @@ import Document from "../models/document";
 import AiHistory from "../models/aiHistory";
 import RecentActivity from "../models/recentActivity";
 
+const getUserId = (req: Request): string | null => {
+    return (req as any).user?._id || (req as any).user?.user?._id || null;
+};
+
+
 /**
  * Controller for simplifying legal documents
  * Endpoint: POST /api/ai/simplify
@@ -17,7 +22,7 @@ import RecentActivity from "../models/recentActivity";
 export const simplifyDocument = async (req: Request, res: Response) => {
     try {
         const { documentId, text, title } = req.body;
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
 
         if (!text && !documentId) {
             return res.status(400).json({
@@ -91,7 +96,7 @@ export const simplifyDocument = async (req: Request, res: Response) => {
 export const summarizeDocument = async (req: Request, res: Response) => {
     try {
         const { documentId, text, title } = req.body;
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
 
         if (!text && !documentId) {
             return res.status(400).json({
@@ -165,7 +170,7 @@ export const summarizeDocument = async (req: Request, res: Response) => {
 export const compareDocuments = async (req: Request, res: Response) => {
     try {
         const { doc1, doc2, documentId1, documentId2, title } = req.body;
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
 
         let text1 = doc1;
         let text2 = doc2;
@@ -246,7 +251,7 @@ export const compareDocuments = async (req: Request, res: Response) => {
 export const analyzeRisk = async (req: Request, res: Response) => {
     try {
         const { documentId, text, title } = req.body;
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
 
         if (!text && !documentId) {
             return res.status(400).json({
@@ -320,7 +325,7 @@ export const analyzeRisk = async (req: Request, res: Response) => {
 export const chatWithDocument = async (req: Request, res: Response) => {
     try {
         const { documentId, question, history, title, text } = req.body;
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
 
         if (!question) {
             return res.status(400).json({
@@ -425,7 +430,7 @@ export const getDocumentProcessingHistory = async (req: Request, res: Response) 
     try {
         const { documentId } = req.params;
         const { type } = req.query; // Optional filter by processing type
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
 
         if (!userId) {
             return res.status(401).json({
@@ -507,7 +512,7 @@ export const getDocumentProcessingHistory = async (req: Request, res: Response) 
 export const getProcessingById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
 
         if (!userId) {
             return res.status(401).json({
@@ -546,7 +551,7 @@ export const getProcessingById = async (req: Request, res: Response) => {
 export const deleteProcessing = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
 
         if (!userId) {
             return res.status(401).json({
@@ -583,7 +588,7 @@ export const deleteProcessing = async (req: Request, res: Response) => {
  */
 export const getAllHistory = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
         const { type, limit = 50, skip = 0 } = req.query;
 
         if (!userId) {
@@ -632,7 +637,7 @@ export const getAllHistory = async (req: Request, res: Response) => {
 export const getHistoryByType = async (req: Request, res: Response) => {
     try {
         const { operationType } = req.params;
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
         const { limit = 50, skip = 0 } = req.query;
 
         if (!userId) {
@@ -688,7 +693,7 @@ export const getHistoryByType = async (req: Request, res: Response) => {
 export const toggleFavorite = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
 
         if (!userId) {
             return res.status(401).json({
@@ -729,7 +734,7 @@ export const toggleFavorite = async (req: Request, res: Response) => {
  */
 export const getFavorites = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
         const { limit = 50, skip = 0 } = req.query;
 
         if (!userId) {

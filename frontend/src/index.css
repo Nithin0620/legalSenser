@@ -37,9 +37,9 @@
 
     --gradient-primary: linear-gradient(135deg, hsl(45, 93%, 47%), hsl(38, 92%, 50%));
     --gradient-dark: linear-gradient(135deg, hsl(0, 0%, 10%), hsl(0, 0%, 3%));
-    --shadow-glow: 0 0 35px hsl(45 93% 47% / 0.3);
-    --shadow-card: 0 10px 30px -10px hsl(0 0% 0% / 0.5);
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-glow: 0 0 15px hsl(45 93% 47% / 0.15);
+    --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.4);
+    --transition-smooth: all 0.2s ease-out;
 
     --sidebar-background: 0 0% 5%;
     --sidebar-foreground: 0 0% 98%;
@@ -83,9 +83,9 @@
 
     --gradient-primary: linear-gradient(135deg, hsl(45, 93%, 47%), hsl(38, 92%, 50%));
     --gradient-dark: linear-gradient(135deg, hsl(0, 0%, 9%), hsl(0, 0%, 2%));
-    --shadow-glow: 0 0 35px hsl(45 93% 47% / 0.35);
-    --shadow-card: 0 10px 30px -10px hsl(0 0% 0% / 0.6);
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow-glow: 0 0 15px hsl(45 93% 47% / 0.15);
+    --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.4);
+    --transition-smooth: all 0.2s ease-out;
 
     --sidebar-background: 0 0% 4%;
     --sidebar-foreground: 0 0% 98%;
