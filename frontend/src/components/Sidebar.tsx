@@ -37,7 +37,8 @@ export function Sidebar() {
     navigate("/login");
   };
 
-  if (!isAuthenticated) return null;
+  const isAuth = isAuthenticated || !!user || !!useAuthStore.getState().token;
+  if (!isAuth) return null;
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-gradient-to-b from-slate-900 via-slate-900 to-slate-800">

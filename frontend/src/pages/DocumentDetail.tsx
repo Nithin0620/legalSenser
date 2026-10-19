@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 export default function DocumentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -267,19 +268,25 @@ export default function DocumentDetail() {
                               </h3>
                             </div>
                             <div className="p-6 text-slate-300 leading-relaxed space-y-6">
-                              <p className="text-xl font-medium text-white mb-4">{aiData.simplified.title}</p>
-                              <div className="whitespace-pre-wrap">{aiData.simplified.summary}</div>
-                              <div className="space-y-3 mt-8">
-                                <h4 className="text-white font-bold text-lg">Key Clauses (Simplified)</h4>
-                                <ul className="space-y-4">
-                                  {aiData.simplified.points?.map((point: string, i: number) => (
-                                    <li key={i} className="flex gap-3 items-start group">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2.5 flex-shrink-0 group-hover:scale-150 transition-all" />
-                                      <span>{point}</span>
-                                    </li>
-                                  ))}
-                                </ul>
+                              <p className="text-xl font-medium text-white mb-4">
+                                {aiData.simplified.title || selectedDocument.title || "Plain English Summary"}
+                              </p>
+                              <div className="whitespace-pre-wrap">
+                                {aiData.simplified.summary || aiData.simplified.simplifiedText}
                               </div>
+                              {((aiData.simplified.points || aiData.simplified.simplifiedPoints)?.length > 0) && (
+                                <div className="space-y-3 mt-8">
+                                  <h4 className="text-white font-bold text-lg">Key Clauses (Simplified)</h4>
+                                  <ul className="space-y-4">
+                                    {(aiData.simplified.points || aiData.simplified.simplifiedPoints).map((point: string, i: number) => (
+                                      <li key={i} className="flex gap-3 items-start group">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2.5 flex-shrink-0 group-hover:scale-150 transition-all" />
+                                        <span>{point}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -312,8 +319,10 @@ export default function DocumentDetail() {
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="p-6">
-                            <h3 className="text-2xl font-bold text-white mb-4">{aiData.summary.title}</h3>
-                            <div className="prose prose-invert max-w-none text-slate-300">
+                            <h3 className="text-2xl font-bold text-white mb-4">
+                              {aiData.summary.title || selectedDocument.title}
+                            </h3>
+                            <div className="prose prose-invert max-w-none text-slate-300 whitespace-pre-wrap">
                               {aiData.summary.summary}
                             </div>
                           </CardContent>
@@ -342,40 +351,57 @@ export default function DocumentDetail() {
                         <div className="space-y-6">
                           <div className="bg-slate-900 rounded-xl border border-white/5 overflow-hidden">
                             <div className="bg-orange-600/20 p-4 border-b border-orange-500/20 flex items-center justify-between">
-                              <h3 className="font-bold text-orange-300 flex items-center gap-2">
-                                <Shield className="w-5 h-5" />
-                                Risk Analysis
-                              </h3>
+                              <div className="flex items-center gap-3">
+                                <h3 className="font-bold text-orange-300 flex items-center gap-2">
+                                  <Shield className="w-5 h-5" />
+                                  Risk Analysis
+                                </h3>
+                                {aiData.risks.overallRisk && (
+                                  <Badge className={cn(
+                                    "border-none",
+                                    aiData.risks.overallRisk.toLowerCase() === "high" || aiData.risks.overallRisk.toLowerCase() === "critical"
+                                      ? "bg-red-500 text-white"
+                                      : "bg-orange-500 text-white"
+                                  )}>
+                                    {aiData.risks.overallRisk} Risk ({aiData.risks.riskScore ?? 0}/100)
+                                  </Badge>
+                                )}
+                              </div>
                               <Badge className="bg-orange-500 text-white border-none">
-                                {aiData.risks.risks?.length || 0} Issues Detected
+                                {(aiData.risks.risks || aiData.risks.clauseRisks || []).length} Issues Detected
                               </Badge>
                             </div>
                             <div className="p-0">
-                              {aiData.risks.risks?.map((risk: any, i: number) => (
-                                <div key={i} className="p-6 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
-                                  <div className="flex items-start justify-between gap-4 mb-3">
-                                    <h4 className="font-bold text-white text-lg">{risk.clause || "Critical Clause"}</h4>
-                                    <Badge className={cn(
-                                      "capitalize border-none",
-                                      risk.riskLevel === 'high' ? "bg-red-500/20 text-red-400" :
-                                      risk.riskLevel === 'medium' ? "bg-orange-500/20 text-orange-400" :
-                                      "bg-green-500/20 text-green-400"
-                                    )}>
-                                      {risk.riskLevel} Risk
-                                    </Badge>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">The Issue</p>
-                                      <p className="text-slate-300 text-sm leading-relaxed">{risk.explanation}</p>
+                              {(aiData.risks.risks || aiData.risks.clauseRisks || []).map((risk: any, i: number) => {
+                                const explanation = risk.explanation || risk.reasoning || "Risk detected in this clause";
+                                const recommendation = risk.recommendation || (aiData.risks.recommendations?.[i]?.action) || "Review this clause carefully with legal counsel.";
+                                const level = (risk.riskLevel || "medium").toLowerCase();
+                                return (
+                                  <div key={i} className="p-6 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
+                                    <div className="flex items-start justify-between gap-4 mb-3">
+                                      <h4 className="font-bold text-white text-lg">{risk.clause || "Critical Clause"}</h4>
+                                      <Badge className={cn(
+                                        "capitalize border-none",
+                                        level === 'high' || level === 'critical' ? "bg-red-500/20 text-red-400" :
+                                        level === 'medium' ? "bg-orange-500/20 text-orange-400" :
+                                        "bg-green-500/20 text-green-400"
+                                      )}>
+                                        {risk.riskLevel || "Medium"} Risk
+                                      </Badge>
                                     </div>
-                                    <div>
-                                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Recommendation</p>
-                                      <p className="text-slate-300 text-sm leading-relaxed">{risk.recommendation}</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      <div>
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">The Issue</p>
+                                        <p className="text-slate-300 text-sm leading-relaxed">{explanation}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Recommendation</p>
+                                        <p className="text-slate-300 text-sm leading-relaxed">{recommendation}</p>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         </div>

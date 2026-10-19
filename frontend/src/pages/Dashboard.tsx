@@ -11,6 +11,10 @@ import {
   Loader,
   AlertCircle,
   RefreshCw,
+  Brain,
+  Upload,
+  Shield,
+  Zap,
 } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
 import { useAuthStore } from "@/store/authStore";
@@ -268,31 +272,4 @@ export default function Dashboard() {
   );
 }
 
-const getActivityIcon = (type: string) => {
-  const iconProps = "w-5 h-5";
-  switch (type?.toLowerCase()) {
-    case "document_upload":
-      return <FileText className={iconProps} />;
-    case "chat":
-      return <MessageSquare className={iconProps} />;
-    case "ai_operation":
-      return <Brain className={iconProps} />;
-    default:
-      return <Activity className={iconProps} />;
-  }
-};
 
-const getActivityColor = (type: string) => {
-  switch (type?.toLowerCase()) {
-    case "document_upload":
-      return "text-blue-400";
-    case "chat":
-      return "text-purple-400";
-    case "ai_operation":
-      return "text-green-400";
-    default:
-      return "text-slate-400";
-  }
-};
-
-import { Shield, Zap } from "lucide-react";

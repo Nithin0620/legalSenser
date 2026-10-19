@@ -61,7 +61,7 @@ export default function Login() {
 
 
 
-  const responseGoogle = async (authResult) => {
+  const responseGoogle = async (authResult: any) => {
     try {
       if (authResult["code"]) {
         const result = await loginWithGoogle(authResult.code);

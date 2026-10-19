@@ -17,6 +17,7 @@ router.post("/sendotp",sendOtp);
 
 router.post("/logout", logout);
 
-router.post("/checkauth",protectRoute,checkAuth)
+router.post("/checkauth", protectRoute, checkAuth);
+router.get("/checkauth", protectRoute, checkAuth);
 
 export default router;

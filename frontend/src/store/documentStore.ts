@@ -35,6 +35,7 @@ interface DocumentState {
   fetchAllHistory: () => Promise<void>;
   
   setError: (error: string | null) => void;
+  clearError: () => void;
 }
 
 export const useDocumentStore = create<DocumentState>((set) => ({
@@ -234,4 +235,5 @@ export const useDocumentStore = create<DocumentState>((set) => ({
   },
 
   setError: (error: string | null) => set({ error }),
+  clearError: () => set({ error: null }),
 }));

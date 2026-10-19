@@ -12,6 +12,7 @@ interface User {
 interface AuthState {
   user: User | null;
   token: string | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
   
@@ -30,6 +31,7 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       token: null,
+      isAuthenticated: false,
       isLoading: false,
       error: null,
 
@@ -52,7 +54,8 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await api.post('/auth/signup', data);
           const { user, token } = response.data;
-          set({ user, token, isLoading: false });
+          set({ user, token, isAuthenticated: true, isLoading: false });
+          return response.data;
         } catch (err: any) {
           set({
             isLoading: false,
@@ -70,7 +73,8 @@ export const useAuthStore = create<AuthState>()(
             passwordInput: password,
           });
           const { user, token } = response.data;
-          set({ user, token, isLoading: false });
+          set({ user, token, isAuthenticated: true, isLoading: false });
+          return response.data;
         } catch (err: any) {
           set({
             isLoading: false,
@@ -86,7 +90,8 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await api.post('/auth/login/google', { idToken });
           const { user, token } = response.data;
-          set({ user, token, isLoading: false });
+          set({ user, token, isAuthenticated: true, isLoading: false });
+          return response.data;
         } catch (err: any) {
           set({
             isLoading: false,
@@ -100,15 +105,15 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await api.get('/auth/checkauth');
           const { user, token } = response.data.data;
-          set({ user, token });
+          set({ user, token, isAuthenticated: true });
         } catch (err) {
-          set({ user: null, token: null });
+          set({ user: null, token: null, isAuthenticated: false });
         }
       },
 
       logout: () => {
         api.post('/auth/logout').catch(() => {});
-        set({ user: null, token: null });
+        set({ user: null, token: null, isAuthenticated: false });
       },
 
       clearError: () => set({ error: null }),
@@ -118,6 +123,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         user: state.user,
         token: state.token,
+        isAuthenticated: !!state.token,
       }),
     }
   )

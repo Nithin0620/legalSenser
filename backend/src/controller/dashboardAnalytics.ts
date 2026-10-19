@@ -1,14 +1,19 @@
 import { Request, Response } from "express";
+import User from "../models/user";
 import Profile from "../models/profile";
 import Document from "../models/document";
 import RecentActivity from "../models/recentActivity";
 
 export const getSavedDocuments = async (req: Request, res: Response) => {
     try {
-        const profile = await Profile.findById((req as any).user._id).populate("savedDocuments");
+        const userId = (req as any).user?._id;
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const profile = await Profile.findById(user.profile).populate("savedDocuments");
         if (!profile) return res.status(404).json({ message: "Profile not found" });
 
-        res.json({ savedDocuments: profile.savedDocuments });
+        res.json({ success: true, savedDocuments: profile.savedDocuments });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Server Error" });
@@ -54,7 +59,11 @@ export const getRecentActivity = async (req: Request, res: Response) => {
 
 export const getUsageStats = async (req: Request, res: Response) => {
     try {
-        const profile = await Profile.findById((req as any).user._id)
+        const userId = (req as any).user?._id;
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const profile = await Profile.findById(user.profile)
             .populate("savedDocuments")
             .populate("recentActivity");
 

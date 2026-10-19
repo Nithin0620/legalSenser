@@ -21,7 +21,7 @@ export function Navbar() {
             <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full group-hover:bg-primary/30 transition-all" />
           </div>
           <span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            CivicAI
+            LegalSenser
           </span>
         </Link>
 

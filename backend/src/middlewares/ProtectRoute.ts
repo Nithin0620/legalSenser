@@ -4,7 +4,11 @@ import User from "../models/user";
 
 export const protectRoute = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const token = req.cookies.jwt;
+        let token = req.cookies?.jwt;
+
+        if (!token && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+            token = req.headers.authorization.split(" ")[1];
+        }
 
         if (!token) {
             return res.status(401).json({
@@ -56,23 +60,24 @@ export const protectRoute = async (req: Request, res: Response, next: NextFuncti
             });
         }
 
-        // attach to request (typed as any to avoid augmentation here)
-        (req as any).user = { user, token };
+        // attach to request with compatibility for both user._id and user.user._id
+        (req as any).user = user;
+        (req as any).user.user = user;
+        (req as any).user.token = token;
         next();
-    } catch (e:any) {
-
+    } catch (e: any) {
         if (e.name === "TokenExpiredError") {
-            return res.status(200).json({
+            return res.status(401).json({
                 success: false,
                 code: "JWT_EXPIRED",
                 message: "Token has expired",
             });
         }
 
-        res.status(500).json({
+        res.status(401).json({
             success: false,
             code: "SERVER_ERROR",
-            message: "Something went wrong",
+            message: e.message || "Authentication failed",
         });
     }
 };

@@ -354,8 +354,32 @@ export const chatWithDocument = async (req: Request, res: Response) => {
             );
         }
 
+        // Convert role-based history to question-answer format expected by AI service
+        let formattedHistory: any[] = [];
+        if (Array.isArray(history)) {
+            for (let i = 0; i < history.length; i++) {
+                if (history[i]?.question && history[i]?.answer) {
+                    formattedHistory.push(history[i]);
+                } else if (history[i]?.role === "user") {
+                    const nextMsg = history[i + 1];
+                    if (nextMsg?.role === "assistant") {
+                        formattedHistory.push({
+                            question: history[i].content,
+                            answer: nextMsg.content
+                        });
+                        i++;
+                    } else {
+                        formattedHistory.push({
+                            question: history[i].content,
+                            answer: ""
+                        });
+                    }
+                }
+            }
+        }
+
         // Call AI service with document context (or empty string for general chat)
-        const result = await callChatAPI(context, question, history || []);
+        const result = await callChatAPI(context, question, formattedHistory);
 
         // Save chat to history
         const historyEntry = await AiHistory.create({

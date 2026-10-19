@@ -1,9 +1,12 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FileText, Download, Trash2, Loader, AlertCircle } from "lucide-react";
+import { FileText, Download, Trash2, Loader, AlertCircle, Calendar, Plus } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
 import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export default function Documents() {
   const { documents, isLoading, error, fetchDocuments, deleteDocument } = useDocumentStore();
@@ -154,6 +157,3 @@ export default function Documents() {
     </div>
   );
 }
-
-import { Calendar, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";

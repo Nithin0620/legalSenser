@@ -10,6 +10,7 @@ import {
   Search,
   Plus,
   ArrowLeft,
+  MessageSquare,
 } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
 import { useAuthStore } from "@/store/authStore";

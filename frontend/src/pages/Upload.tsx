@@ -8,9 +8,13 @@ import {
   CheckCircle2,
   X,
   FileText,
+  Brain,
+  Shield,
 } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export default function Upload() {
   const navigate = useNavigate();
@@ -222,6 +226,3 @@ export default function Upload() {
     </div>
   );
 }
-
-import { cn } from "@/lib/utils";
-import { Brain, Shield } from "lucide-react";

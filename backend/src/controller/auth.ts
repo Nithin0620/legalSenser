@@ -58,9 +58,10 @@ export const sendOtp = async (req: Request, res: Response) => {
 
 export const signupWithOtp = async (req: Request, res: Response) => {
     try {
-        const { name, email, mobileNo, password, otpInput } = req.body;
+        const { name, email, mobileNo, password } = req.body;
+        const otpValue = req.body.otpInput || req.body.otp;
 
-        if (!name || !email || !password || !otpInput) {
+        if (!name || !email || !password || !otpValue) {
             return res.status(400).json({
                 success: false,
                 message: "Name, email, password, and OTP are required"
@@ -70,7 +71,7 @@ export const signupWithOtp = async (req: Request, res: Response) => {
         // Find the most recent OTP for this email
         const otpRecord = await Otp.findOne({ email }).sort({ createdAt: -1 });
 
-        if (!otpRecord || otpRecord.otp !== otpInput) {
+        if (!otpRecord || otpRecord.otp !== otpValue) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid or expired OTP"
@@ -107,6 +108,13 @@ export const signupWithOtp = async (req: Request, res: Response) => {
 
         // Delete used OTP
         await Otp.deleteOne({ _id: otpRecord._id });
+
+        res.cookie("jwt", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 2 * 24 * 60 * 60 * 1000,
+        });
 
         res.status(201).json({
             success: true,
@@ -154,6 +162,13 @@ export const login = async (req: Request, res: Response) => {
         }
 
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET!, { expiresIn: "2d" });
+
+        res.cookie("jwt", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 2 * 24 * 60 * 60 * 1000,
+        });
 
         res.status(200).json({ user, token });
 
@@ -203,6 +218,13 @@ export const googleLogin = async (req: Request, res: Response) => {
             process.env.JWT_SECRET!,
             { expiresIn: "2d" }
         );
+
+        res.cookie("jwt", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 2 * 24 * 60 * 60 * 1000,
+        });
 
         res.status(200).json({ user, token });
 
