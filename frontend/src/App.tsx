@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -21,34 +22,52 @@ import { AnimatedBackground } from "./components/AnimatedBackground";
 
 const queryClient = new QueryClient();
 
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const isGoogleConfigured = Boolean(
+  googleClientId &&
+  googleClientId.trim() !== "" &&
+  googleClientId !== "your_google_client_id_here"
+);
+
+const AppRoutes = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <AnimatedBackground />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/upload" element={<Upload />} />
+          <Route path="/documents" element={<Documents />} />
+          <Route path="/document/:id" element={<DocumentDetail />} />
+          <Route path="/compare" element={<Compare />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/chat/:documentId" element={<Chat />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/settings" element={<Settings />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
 const App = () => (
-  <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AnimatedBackground />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/upload" element={<Upload />} />
-            <Route path="/documents" element={<Documents />} />
-            <Route path="/document/:id" element={<DocumentDetail />} />
-            <Route path="/compare" element={<Compare />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/chat/:documentId" element={<Chat />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/settings" element={<Settings />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </GoogleOAuthProvider>
+  <ErrorBoundary>
+    {isGoogleConfigured && googleClientId ? (
+      <GoogleOAuthProvider clientId={googleClientId}>
+        <AppRoutes />
+      </GoogleOAuthProvider>
+    ) : (
+      <AppRoutes />
+    )}
+  </ErrorBoundary>
 );
 
 export default App;
+

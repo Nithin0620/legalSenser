@@ -18,15 +18,90 @@ const GoogleIcon = () => (
   </svg>
 );
 
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const isGoogleConfigured = Boolean(
+  googleClientId &&
+  googleClientId.trim() !== "" &&
+  googleClientId !== "your_google_client_id_here"
+);
+
+interface GoogleButtonProps {
+  isLoading: boolean;
+  setLocalError: (msg: string) => void;
+}
+
+const ActiveGoogleLoginButton = ({ isLoading, setLocalError }: GoogleButtonProps) => {
+  const navigate = useNavigate();
+  const { loginWithGoogle } = useAuthStore();
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const responseGoogle = async (authResult: any) => {
+    try {
+      if (authResult?.code) {
+        setIsGoogleLoading(true);
+        await loginWithGoogle(authResult.code);
+        navigate("/dashboard");
+      } else {
+        console.error("Google Auth response:", authResult);
+        setLocalError("Google sign-in was not authorized or was canceled.");
+      }
+    } catch (e: any) {
+      console.error("Error while Google Login:", e);
+      setLocalError(e?.response?.data?.message || e?.message || "Error during Google authentication.");
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: responseGoogle,
+    onError: responseGoogle,
+    flow: "auth-code",
+  });
+
+  return (
+    <button
+      type="button"
+      onClick={() => googleLogin()}
+      disabled={isLoading || isGoogleLoading}
+      className="w-full flex items-center justify-center gap-2 bg-black hover:bg-white/5 border border-border text-white font-semibold py-2.5 h-11 rounded-xl transition-all duration-200 text-xs disabled:opacity-50"
+    >
+      {isGoogleLoading ? (
+        <>
+          <Loader className="w-4 h-4 animate-spin text-amber-400" />
+          Signing in with Google...
+        </>
+      ) : (
+        <>
+          <GoogleIcon />
+          Continue with Google
+        </>
+      )}
+    </button>
+  );
+};
+
+const FallbackGoogleLoginButton = ({ setLocalError }: { setLocalError: (msg: string) => void }) => (
+  <button
+    type="button"
+    onClick={() => {
+      setLocalError("Google OAuth is not configured. Please sign in with email & password or provide VITE_GOOGLE_CLIENT_ID in your environment.");
+    }}
+    className="w-full flex items-center justify-center gap-2 bg-black hover:bg-white/5 border border-border/70 text-muted-foreground font-semibold py-2.5 h-11 rounded-xl transition-all duration-200 text-xs"
+  >
+    <GoogleIcon />
+    Continue with Google
+  </button>
+);
+
 export default function Login() {
   const navigate = useNavigate();
-  const { login, loginWithGoogle, error, isLoading, clearError } = useAuthStore();
+  const { login, error, isLoading, clearError } = useAuthStore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState("");
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const validateForm = () => {
     if (!email.trim()) {
@@ -52,39 +127,17 @@ export default function Login() {
     if (!validateForm()) return;
 
     try {
-      const success = await login(email, password);
-      navigate('/dashboard');
+      await login(email, password);
+      navigate("/dashboard");
     } catch (err) {
-      setLocalError("Login failed. Please try again.");
+      setLocalError("Login failed. Please check credentials and try again.");
     }
   };
-
-
-
-  const responseGoogle = async (authResult: any) => {
-    try {
-      if (authResult["code"]) {
-        const result = await loginWithGoogle(authResult.code);
-       navigate('/dashboard');
-      } else {
-        console.log(authResult);
-        throw new Error(authResult);
-      }
-    } catch (e) {
-      console.log('Error while Google Login...', e);
-    }
-  };
-
-  const googleLogin = useGoogleLogin({
-    onSuccess: responseGoogle,
-    onError: responseGoogle,
-    flow: "auth-code",
-  });
 
   const displayError = localError || error;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative z-0">
+    <div className="min-h-screen flex items-center justify-center p-4 relative z-0 bg-black">
       <AnimatedBackground />
 
       <motion.div
@@ -94,7 +147,7 @@ export default function Login() {
         className="relative w-full max-w-md"
       >
         {/* Card */}
-        <div className="bg-slate-800/50 backdrop-blur-md border border-slate-700/50 rounded-2xl shadow-2xl p-8">
+        <div className="bg-card border border-border rounded-3xl shadow-2xl p-8 backdrop-blur-xl">
           {/* Logo/Header */}
           <div className="text-center mb-8">
             <motion.div
@@ -104,16 +157,16 @@ export default function Login() {
               className="inline-block"
             >
               <div className="relative mb-4">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg blur opacity-75"></div>
-                <div className="relative bg-slate-900 rounded-lg p-3">
-                  <LogIn className="w-8 h-8 text-transparent bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text" />
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-lg blur opacity-75"></div>
+                <div className="relative bg-black border border-amber-500/30 rounded-lg p-3">
+                  <LogIn className="w-7 h-7 text-amber-400" />
                 </div>
               </div>
             </motion.div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+            <h1 className="text-3xl font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 bg-clip-text text-transparent mb-1">
               LegalSenser
             </h1>
-            <p className="text-slate-400 text-sm">AI-Powered Legal Document Assistant</p>
+            <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">AI Legal Intelligence Platform</p>
           </div>
 
           {/* Error Alert */}
@@ -121,10 +174,10 @@ export default function Login() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-start gap-3"
+              className="mb-6 p-4 bg-destructive/10 border border-destructive/30 rounded-xl flex items-start gap-3"
             >
-              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-              <p className="text-red-300 text-sm">{displayError}</p>
+              <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+              <p className="text-destructive text-sm">{displayError}</p>
             </motion.div>
           )}
 
@@ -136,11 +189,11 @@ export default function Login() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.15 }}
             >
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
+                <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
                 <Input
                   type="email"
                   value={email}
@@ -148,8 +201,8 @@ export default function Login() {
                     setEmail(e.target.value);
                     setLocalError("");
                   }}
-                  placeholder="you@example.com"
-                  className="pl-10 bg-slate-700/50 border-slate-600 text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500"
+                  placeholder="counsel@firm.com"
+                  className="pl-10 bg-black border-border text-white placeholder:text-muted-foreground/40 focus:border-amber-400 h-11 rounded-xl text-sm"
                   disabled={isLoading}
                 />
               </div>
@@ -161,11 +214,11 @@ export default function Login() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 w-5 h-5 text-slate-500" />
+                <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -174,15 +227,15 @@ export default function Login() {
                     setLocalError("");
                   }}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-10 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors disabled:opacity-50"
+                  className="w-full pl-10 pr-10 py-2.5 bg-black border border-border rounded-xl text-white placeholder:text-muted-foreground/40 focus:outline-none focus:border-amber-400 text-sm transition-colors disabled:opacity-50"
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-slate-500 hover:text-slate-300"
+                  className="absolute right-3.5 top-3 text-muted-foreground hover:text-white"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </motion.div>
@@ -192,33 +245,34 @@ export default function Login() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
+              className="pt-2"
             >
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium py-2.5 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black py-2.5 h-11 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50"
               >
                 {isLoading ? (
                   <>
-                    <Loader className="w-4 h-4 animate-spin" />
+                    <Loader className="w-4 h-4 animate-spin text-black" />
                     Signing in...
                   </>
                 ) : (
                   <>
                     <LogIn className="w-4 h-4" />
-                    Sign In
+                    Sign In to Workspace
                   </>
                 )}
               </Button>
             </motion.div>
 
             {/* Divider */}
-            <div className="relative py-4">
+            <div className="relative py-3">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-600"></div>
+                <div className="w-full border-t border-border"></div>
               </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-slate-800/50 text-slate-400">or</span>
+              <div className="relative flex justify-center text-xs">
+                <span className="px-2 bg-card text-muted-foreground uppercase font-bold tracking-wider">or</span>
               </div>
             </div>
 
@@ -228,24 +282,16 @@ export default function Login() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.28 }}
             >
-              <button
-                type="button"
-                onClick={googleLogin}
-                disabled={isLoading || isGoogleLoading}
-                className="w-full flex items-center justify-center gap-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 text-slate-100 font-medium py-2.5 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isGoogleLoading ? (
-                  <>
-                    <Loader className="w-4 h-4 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  <>
-                    <GoogleIcon />
-                    Continue with Google
-                  </>
-                )}
-              </button>
+              {isGoogleConfigured ? (
+                <ActiveGoogleLoginButton
+                  isLoading={isLoading}
+                  setLocalError={setLocalError}
+                />
+              ) : (
+                <FallbackGoogleLoginButton
+                  setLocalError={setLocalError}
+                />
+              )}
             </motion.div>
 
             {/* Sign Up Link */}
@@ -253,21 +299,22 @@ export default function Login() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
+              className="pt-2"
             >
-              <p className="text-center text-slate-400 text-sm">
+              <p className="text-center text-muted-foreground text-xs">
                 Don't have an account?{" "}
                 <Link
                   to="/signup"
-                  className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                  className="text-amber-400 hover:text-amber-300 font-bold transition-colors"
                 >
-                  Sign up here
+                  Create one now
                 </Link>
               </p>
             </motion.div>
           </form>
 
           {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-slate-700/50 text-center text-xs text-slate-500">
+          <div className="mt-6 pt-4 border-t border-border text-center text-xs text-muted-foreground">
             <p>Demo credentials: test@example.com / password123</p>
           </div>
         </div>

@@ -16,15 +16,18 @@ import {
   Info,
   Loader,
   Brain,
+  Sparkles,
+  GitCompare,
+  Check,
 } from "lucide-react";
 import { useDocumentStore } from "@/store/documentStore";
 import { Button } from "@/components/ui/button";
-import { Sidebar } from "@/components/Sidebar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { AppLayout } from "@/components/AppLayout";
 
 export default function DocumentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +41,7 @@ export default function DocumentDetail() {
     risks: null,
   });
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -70,120 +74,155 @@ export default function DocumentDetail() {
     }
   };
 
+  const handleDownload = () => {
+    if (!selectedDocument) return;
+    const content = (selectedDocument as any).originalText || "";
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${selectedDocument.title || "document"}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    if (window.confirm("Are you sure you want to delete this document permanently?")) {
+      await (useDocumentStore.getState().deleteDocument)(id);
+      navigate("/documents");
+    }
+  };
+
   if (isLoading && !selectedDocument) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader className="w-12 h-12 text-blue-500 animate-spin" />
-          <p className="text-slate-400 animate-pulse text-lg">Loading your document...</p>
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center py-32 gap-4">
+          <Loader className="w-10 h-10 text-amber-400 animate-spin" />
+          <p className="text-muted-foreground font-medium text-sm">Loading contract intelligence...</p>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (!selectedDocument) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
-        <div className="text-center max-w-md">
-          <AlertTriangle className="w-16 h-16 text-orange-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">Document Not Found</h2>
-          <p className="text-slate-400 mb-6">We couldn't find the document you're looking for. It might have been deleted.</p>
-          <Button onClick={() => navigate("/documents")} className="bg-blue-600 hover:bg-blue-700">
-            Back to Documents
+      <AppLayout>
+        <div className="text-center max-w-md mx-auto py-24">
+          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl w-16 h-16 flex items-center justify-center mx-auto mb-4 text-amber-400">
+            <AlertTriangle className="w-8 h-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Contract Not Found</h2>
+          <p className="text-muted-foreground text-sm mb-6">
+            We couldn't locate this document. It may have been archived or deleted.
+          </p>
+          <Button onClick={() => navigate("/documents")} className="bg-gradient-to-r from-amber-500 to-yellow-500 text-black font-bold rounded-xl">
+            Return to Library
           </Button>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
+  const wordCount = (selectedDocument as any).originalText?.split(/\s+/).length || 0;
+
   return (
-    <div className="min-h-screen md:ml-64 relative z-0">
-      <Sidebar />
-      
-      {/* Header */}
-      <div className="p-6 md:p-8 border-b border-white/5 bg-slate-900/50 backdrop-blur-xl sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <motion.button
-              whileHover={{ x: -2 }}
+    <AppLayout>
+      <div className="space-y-6">
+        {/* Document Header Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-border/60">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
               onClick={() => navigate("/documents")}
-              className="p-2 bg-slate-800/50 hover:bg-slate-700/50 rounded-full text-slate-400 hover:text-white transition-all border border-white/5"
+              className="p-2 bg-card hover:bg-black rounded-xl text-muted-foreground hover:text-white transition-colors border border-border flex-shrink-0"
+              title="Back to library"
             >
-              <ArrowLeft className="w-5 h-5" />
-            </motion.button>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 px-2 py-0">
-                  {selectedDocument.documentType?.toUpperCase()}
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5">
+                  {selectedDocument.documentType || "Contract"}
                 </Badge>
-                <span className="text-xs text-slate-500">v{selectedDocument.version}</span>
+                <span className="text-xs text-muted-foreground">v{selectedDocument.version || 1}.0</span>
+                <span className="text-xs text-muted-foreground">•</span>
+                <span className="text-xs text-muted-foreground">{wordCount.toLocaleString()} words</span>
               </div>
-              <h1 className="text-2xl font-bold text-white leading-tight">
+              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight truncate">
                 {selectedDocument.title}
               </h1>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white hover:bg-white/5">
-              <Download className="w-5 h-5" />
+          <div className="flex items-center gap-2.5 flex-shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownload}
+              className="h-9 px-3 border-border hover:border-amber-500/50 text-xs gap-1.5"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download</span>
             </Button>
-            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white hover:bg-white/5">
-              <Share2 className="w-5 h-5" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+              className="h-9 px-3 border-border hover:border-amber-500/50 text-xs gap-1.5"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-amber-400" /> : <Share2 className="w-3.5 h-3.5" />}
+              <span>{copied ? "Copied" : "Share"}</span>
             </Button>
-            <div className="w-[1px] h-8 bg-white/10 mx-1" />
             <Link to={`/chat/${selectedDocument._id}`}>
-              <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 gap-2 font-medium">
-                <MessageSquare className="w-4 h-4" />
-                Chat with AI
+              <Button size="sm" className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black rounded-xl h-9 px-4 text-xs font-black shadow-md shadow-amber-500/20 gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Ask Copilot</span>
               </Button>
             </Link>
           </div>
         </div>
-      </div>
 
-      <main className="p-6 md:p-8 max-w-7xl mx-auto pb-24">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+        {/* Content Tabs & Analysis Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Main Analysis Column */}
-          <div className="lg:col-span-8 space-y-8">
+          <div className="lg:col-span-8 space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="bg-slate-900/50 border border-white/5 p-1 h-auto flex-wrap sm:flex-nowrap">
-                <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white py-2">
-                  <div className="flex items-center gap-2">
-                    <AlignLeft className="w-4 h-4" />
-                    <span>Overview</span>
-                  </div>
+              <TabsList className="bg-black border border-border p-1 rounded-xl h-auto flex flex-wrap gap-1">
+                <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-yellow-500 data-[state=active]:text-black rounded-lg text-xs font-bold py-2 px-3 gap-1.5">
+                  <AlignLeft className="w-3.5 h-3.5" />
+                  <span>Overview</span>
                 </TabsTrigger>
-                <TabsTrigger value="simplify" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white py-2">
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4" />
-                    <span>Simplify</span>
-                  </div>
+                <TabsTrigger value="risks" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-yellow-500 data-[state=active]:text-black rounded-lg text-xs font-bold py-2 px-3 gap-1.5">
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>Risk Radar</span>
                 </TabsTrigger>
-                <TabsTrigger value="summary" className="data-[state=active]:bg-indigo-600 data-[state=active]:text-white py-2">
-                  <div className="flex items-center gap-2">
-                    <AlignLeft className="w-4 h-4" />
-                    <span>Summary</span>
-                  </div>
+                <TabsTrigger value="simplify" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-yellow-500 data-[state=active]:text-black rounded-lg text-xs font-bold py-2 px-3 gap-1.5">
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Plain English</span>
                 </TabsTrigger>
-                <TabsTrigger value="risks" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white py-2">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4" />
-                    <span>Risks</span>
-                  </div>
+                <TabsTrigger value="summary" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-yellow-500 data-[state=active]:text-black rounded-lg text-xs font-bold py-2 px-3 gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Summary</span>
                 </TabsTrigger>
-                <TabsTrigger value="original" className="data-[state=active]:bg-slate-700 data-[state=active]:text-white py-2">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    <span>Original</span>
-                  </div>
+                <TabsTrigger value="original" className="data-[state=active]:bg-card data-[state=active]:text-white rounded-lg text-xs font-bold py-2 px-3 gap-1.5">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Original Document</span>
                 </TabsTrigger>
               </TabsList>
 
-              <div className="mt-8 min-h-[500px]">
+              <div className="mt-6">
                 <AnimatePresence mode="wait">
-                  {/* Overview TabContent Content handled by direct div for layout control */}
+                  {/* Overview Tab */}
                   {activeTab === "overview" && (
                     <motion.div
                       key="overview"
@@ -192,154 +231,61 @@ export default function DocumentDetail() {
                       exit={{ opacity: 0, y: -10 }}
                       className="space-y-6"
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Card className="bg-slate-900 border-white/5">
-                          <CardHeader className="pb-2">
-                            <CardDescription className="text-slate-500">Document Type</CardDescription>
-                            <CardTitle className="text-xl text-white capitalize">{selectedDocument.documentType}</CardTitle>
-                          </CardHeader>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <Card className="bg-card border-border p-4">
+                          <CardDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Classification</CardDescription>
+                          <CardTitle className="text-lg font-bold text-white capitalize mt-1">{selectedDocument.documentType || "Contract"}</CardTitle>
                         </Card>
-                        <Card className="bg-slate-900 border-white/5">
-                          <CardHeader className="pb-2">
-                            <CardDescription className="text-slate-500">Word Count</CardDescription>
-                            <CardTitle className="text-xl text-white">{(selectedDocument as any).originalText?.split(/\s+/).length || 0}</CardTitle>
-                          </CardHeader>
+                        <Card className="bg-card border-border p-4">
+                          <CardDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Word Count</CardDescription>
+                          <CardTitle className="text-lg font-bold text-white mt-1">{wordCount.toLocaleString()}</CardTitle>
                         </Card>
-                        <Card className="bg-slate-900 border-white/5">
-                          <CardHeader className="pb-2">
-                            <CardDescription className="text-slate-500">Uploaded On</CardDescription>
-                            <CardTitle className="text-xl text-white">{new Date(selectedDocument.uploadedAt).toLocaleDateString()}</CardTitle>
-                          </CardHeader>
+                        <Card className="bg-card border-border p-4">
+                          <CardDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Uploaded</CardDescription>
+                          <CardTitle className="text-lg font-bold text-white mt-1">{new Date(selectedDocument.uploadedAt).toLocaleDateString()}</CardTitle>
                         </Card>
                       </div>
 
-                      <Card className="bg-slate-900/30 border-white/5 backdrop-blur-sm">
-                        <CardHeader>
-                          <CardTitle className="text-lg text-white flex items-center gap-2">
-                            <Brain className="w-5 h-5 text-blue-400" />
-                            AI Insights Overview
-                          </CardTitle>
-                          <CardDescription>Select an action below to generate insights</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Card className="bg-card border-border backdrop-blur-md p-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Brain className="w-5 h-5 text-amber-400" />
+                          <h3 className="text-base font-bold text-white">AI Analysis Quick Launch</h3>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-6">
+                          Trigger deep legal analysis modules powered by LegalSenser's domain models.
+                        </p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <Button 
+                            onClick={() => handleAiAction("analyzeRisk")} 
+                            disabled={isProcessing === "analyzeRisk"}
+                            className="h-auto py-5 flex-col gap-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold text-xs rounded-xl transition-all"
+                          >
+                            {isProcessing === "analyzeRisk" ? <Loader className="w-5 h-5 animate-spin text-amber-400" /> : <Shield className="w-5 h-5" />}
+                            Audit Risk Radar
+                          </Button>
                           <Button 
                             onClick={() => handleAiAction("simplify")} 
                             disabled={isProcessing === "simplify"}
-                            className="h-auto py-6 flex-col gap-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-400 transition-all font-semibold"
+                            className="h-auto py-5 flex-col gap-2 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 font-bold text-xs rounded-xl transition-all"
                           >
-                            {isProcessing === "simplify" ? <Loader className="w-6 h-6 animate-spin" /> : <Zap className="w-6 h-6" />}
-                            Simplify Text
+                            {isProcessing === "simplify" ? <Loader className="w-5 h-5 animate-spin text-yellow-400" /> : <Zap className="w-5 h-5" />}
+                            Simplify Legalese
                           </Button>
                           <Button 
                             onClick={() => handleAiAction("summarize")} 
                             disabled={isProcessing === "summarize"}
-                            className="h-auto py-6 flex-col gap-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 transition-all font-semibold"
+                            className="h-auto py-5 flex-col gap-2 bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/30 text-amber-200 font-bold text-xs rounded-xl transition-all"
                           >
-                            {isProcessing === "summarize" ? <Loader className="w-6 h-6 animate-spin" /> : <AlignLeft className="w-6 h-6" />}
-                            Generate Summary
+                            {isProcessing === "summarize" ? <Loader className="w-5 h-5 animate-spin text-amber-300" /> : <Sparkles className="w-5 h-5" />}
+                            Executive Summary
                           </Button>
-                          <Button 
-                            onClick={() => handleAiAction("analyzeRisk")} 
-                            disabled={isProcessing === "analyzeRisk"}
-                            className="h-auto py-6 flex-col gap-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 transition-all font-semibold"
-                          >
-                            {isProcessing === "analyzeRisk" ? <Loader className="w-6 h-6 animate-spin" /> : <Shield className="w-6 h-6" />}
-                            Detect Risks
-                          </Button>
-                        </CardContent>
+                        </div>
                       </Card>
                     </motion.div>
                   )}
 
-                  {activeTab === "simplify" && (
-                    <motion.div
-                      key="simplify"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                    >
-                      {aiData.simplified ? (
-                        <div className="space-y-6">
-                          <div className="bg-slate-900/50 rounded-xl border border-white/5 overflow-hidden">
-                            <div className="bg-purple-600/20 p-4 border-b border-purple-500/20">
-                              <h3 className="font-bold text-purple-300 flex items-center gap-2">
-                                <Zap className="w-5 h-5" />
-                                Simplified Version
-                              </h3>
-                            </div>
-                            <div className="p-6 text-slate-300 leading-relaxed space-y-6">
-                              <p className="text-xl font-medium text-white mb-4">
-                                {aiData.simplified.title || selectedDocument.title || "Plain English Summary"}
-                              </p>
-                              <div className="whitespace-pre-wrap">
-                                {aiData.simplified.summary || aiData.simplified.simplifiedText}
-                              </div>
-                              {((aiData.simplified.points || aiData.simplified.simplifiedPoints)?.length > 0) && (
-                                <div className="space-y-3 mt-8">
-                                  <h4 className="text-white font-bold text-lg">Key Clauses (Simplified)</h4>
-                                  <ul className="space-y-4">
-                                    {(aiData.simplified.points || aiData.simplified.simplifiedPoints).map((point: string, i: number) => (
-                                      <li key={i} className="flex gap-3 items-start group">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-2.5 flex-shrink-0 group-hover:scale-150 transition-all" />
-                                        <span>{point}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-20 text-center">
-                          <Zap className="w-16 h-16 text-slate-700 mb-4" />
-                          <h3 className="text-xl font-bold text-white mb-2">No Simplified Version Yet</h3>
-                          <p className="text-slate-400 mb-6 max-w-sm">Use the AI to translate complex legal jargon into plain, clear English.</p>
-                          <Button onClick={() => handleAiAction("simplify")} className="bg-purple-600">
-                            Simplify Now
-                          </Button>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-
-                  {activeTab === "summary" && (
-                    <motion.div
-                      key="summary"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                    >
-                      {aiData.summary ? (
-                        <Card className="bg-slate-900 border-white/5">
-                          <CardHeader className="border-b border-white/5">
-                            <CardTitle className="text-white flex items-center gap-2">
-                              <AlignLeft className="w-5 h-5 text-indigo-400" />
-                              Document Summary
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-6">
-                            <h3 className="text-2xl font-bold text-white mb-4">
-                              {aiData.summary.title || selectedDocument.title}
-                            </h3>
-                            <div className="prose prose-invert max-w-none text-slate-300 whitespace-pre-wrap">
-                              {aiData.summary.summary}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-20 text-center">
-                          <AlignLeft className="w-16 h-16 text-slate-700 mb-4" />
-                          <h3 className="text-xl font-bold text-white mb-2">No Summary Generated</h3>
-                          <p className="text-slate-400 mb-6 max-w-sm">Get a high-level overview of everything hidden in this document.</p>
-                          <Button onClick={() => handleAiAction("summarize")} className="bg-indigo-600">
-                            Generate Summary
-                          </Button>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-
+                  {/* Risk Radar Tab */}
                   {activeTab === "risks" && (
                     <motion.div
                       key="risks"
@@ -348,55 +294,54 @@ export default function DocumentDetail() {
                       exit={{ opacity: 0, y: -10 }}
                     >
                       {aiData.risks ? (
-                        <div className="space-y-6">
-                          <div className="bg-slate-900 rounded-xl border border-white/5 overflow-hidden">
-                            <div className="bg-orange-600/20 p-4 border-b border-orange-500/20 flex items-center justify-between">
+                        <div className="space-y-4">
+                          <div className="bg-card border border-border rounded-2xl overflow-hidden backdrop-blur-md">
+                            <div className="bg-amber-500/10 p-4 border-b border-amber-500/20 flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <h3 className="font-bold text-orange-300 flex items-center gap-2">
-                                  <Shield className="w-5 h-5" />
-                                  Risk Analysis
-                                </h3>
+                                <Shield className="w-5 h-5 text-amber-400" />
+                                <span className="text-sm font-bold text-white">Risk Radar Audit</span>
                                 {aiData.risks.overallRisk && (
                                   <Badge className={cn(
-                                    "border-none",
+                                    "border-none text-xs font-bold",
                                     aiData.risks.overallRisk.toLowerCase() === "high" || aiData.risks.overallRisk.toLowerCase() === "critical"
-                                      ? "bg-red-500 text-white"
-                                      : "bg-orange-500 text-white"
+                                      ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                                      : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
                                   )}>
-                                    {aiData.risks.overallRisk} Risk ({aiData.risks.riskScore ?? 0}/100)
+                                    {aiData.risks.overallRisk} Severity ({aiData.risks.riskScore ?? 0}/100)
                                   </Badge>
                                 )}
                               </div>
-                              <Badge className="bg-orange-500 text-white border-none">
-                                {(aiData.risks.risks || aiData.risks.clauseRisks || []).length} Issues Detected
+                              <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-400 font-bold">
+                                {(aiData.risks.risks || aiData.risks.clauseRisks || []).length} Clause Findings
                               </Badge>
                             </div>
-                            <div className="p-0">
+
+                            <div className="divide-y divide-border/60">
                               {(aiData.risks.risks || aiData.risks.clauseRisks || []).map((risk: any, i: number) => {
                                 const explanation = risk.explanation || risk.reasoning || "Risk detected in this clause";
                                 const recommendation = risk.recommendation || (aiData.risks.recommendations?.[i]?.action) || "Review this clause carefully with legal counsel.";
                                 const level = (risk.riskLevel || "medium").toLowerCase();
                                 return (
-                                  <div key={i} className="p-6 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
+                                  <div key={i} className="p-5 hover:bg-black/40 transition-colors">
                                     <div className="flex items-start justify-between gap-4 mb-3">
-                                      <h4 className="font-bold text-white text-lg">{risk.clause || "Critical Clause"}</h4>
+                                      <h4 className="font-bold text-white text-sm">{risk.clause || `Clause Analysis #${i + 1}`}</h4>
                                       <Badge className={cn(
-                                        "capitalize border-none",
+                                        "capitalize border-none text-[11px] font-bold px-2 py-0.5",
                                         level === 'high' || level === 'critical' ? "bg-red-500/20 text-red-400" :
-                                        level === 'medium' ? "bg-orange-500/20 text-orange-400" :
-                                        "bg-green-500/20 text-green-400"
+                                        level === 'medium' ? "bg-amber-500/20 text-amber-400" :
+                                        "bg-emerald-500/20 text-emerald-400"
                                       )}>
                                         {risk.riskLevel || "Medium"} Risk
                                       </Badge>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                      <div>
-                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">The Issue</p>
-                                        <p className="text-slate-300 text-sm leading-relaxed">{explanation}</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                                      <div className="p-3 rounded-xl bg-black border border-border">
+                                        <p className="font-bold text-muted-foreground uppercase tracking-wider text-[10px] mb-1">Issue Identified</p>
+                                        <p className="text-slate-300 leading-relaxed">{explanation}</p>
                                       </div>
-                                      <div>
-                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Recommendation</p>
-                                        <p className="text-slate-300 text-sm leading-relaxed">{recommendation}</p>
+                                      <div className="p-3 rounded-xl bg-black border border-amber-500/30">
+                                        <p className="font-bold text-amber-400 uppercase tracking-wider text-[10px] mb-1">Recommended Counter-Measure</p>
+                                        <p className="text-slate-300 leading-relaxed">{recommendation}</p>
                                       </div>
                                     </div>
                                   </div>
@@ -405,19 +350,115 @@ export default function DocumentDetail() {
                             </div>
                           </div>
                         </div>
-                       ) : (
-                        <div className="flex flex-col items-center justify-center py-20 text-center">
-                          <Shield className="w-16 h-16 text-slate-700 mb-4" />
-                          <h3 className="text-xl font-bold text-white mb-2">No Risk Analysis Run</h3>
-                          <p className="text-slate-400 mb-6 max-w-sm">Automatically scan for predatory clauses or unfavorable terms.</p>
-                          <Button onClick={() => handleAiAction("analyzeRisk")} className="bg-orange-600">
-                            Detect Risks
+                      ) : (
+                        <div className="text-center py-16 bg-card border border-dashed border-border rounded-2xl p-6">
+                          <Shield className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                          <h3 className="text-base font-bold text-white mb-1">No Risk Radar Run Yet</h3>
+                          <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">
+                            Automatically scan for predatory indemnities, unlimited liability, or IP transfer clauses.
+                          </p>
+                          <Button onClick={() => handleAiAction("analyzeRisk")} className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 text-black text-xs h-9 px-4 rounded-xl font-bold">
+                            Run Risk Radar Now
                           </Button>
                         </div>
                       )}
                     </motion.div>
                   )}
 
+                  {/* Plain English Tab */}
+                  {activeTab === "simplify" && (
+                    <motion.div
+                      key="simplify"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                    >
+                      {aiData.simplified ? (
+                        <div className="bg-card border border-border rounded-2xl overflow-hidden backdrop-blur-md">
+                          <div className="bg-amber-500/10 p-4 border-b border-amber-500/20 flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
+                              <Zap className="w-4 h-4" />
+                              <span>Plain-English Translation</span>
+                            </div>
+                            <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-400 font-bold">
+                              Legalese Eliminated
+                            </Badge>
+                          </div>
+                          <div className="p-6 text-slate-300 space-y-5 text-sm leading-relaxed">
+                            <p className="text-white font-bold text-base">
+                              {aiData.simplified.title || selectedDocument.title}
+                            </p>
+                            <div className="whitespace-pre-wrap bg-black p-4 rounded-xl border border-border text-xs sm:text-sm">
+                              {aiData.simplified.summary || aiData.simplified.simplifiedText}
+                            </div>
+                            {((aiData.simplified.points || aiData.simplified.simplifiedPoints)?.length > 0) && (
+                              <div className="space-y-2.5 pt-2">
+                                <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Key Clauses Simplified</h4>
+                                <div className="space-y-2">
+                                  {(aiData.simplified.points || aiData.simplified.simplifiedPoints).map((point: string, i: number) => (
+                                    <div key={i} className="flex gap-2.5 items-start p-2.5 rounded-lg bg-black border border-border text-xs">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+                                      <span className="text-slate-300">{point}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-16 bg-card border border-dashed border-border rounded-2xl p-6">
+                          <Zap className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                          <h3 className="text-base font-bold text-white mb-1">No Plain English Version Yet</h3>
+                          <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">
+                            Transform Latin legalese and convoluted phrasing into clear, readable language.
+                          </p>
+                          <Button onClick={() => handleAiAction("simplify")} className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 text-black text-xs h-9 px-4 rounded-xl font-bold">
+                            Translate to Plain English
+                          </Button>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {/* Summary Tab */}
+                  {activeTab === "summary" && (
+                    <motion.div
+                      key="summary"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                    >
+                      {aiData.summary ? (
+                        <Card className="bg-card border-border backdrop-blur-md overflow-hidden">
+                          <CardHeader className="bg-amber-500/10 border-b border-amber-500/20 p-4">
+                            <CardTitle className="text-amber-300 text-sm font-bold flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-amber-400" />
+                              Executive Summary
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-6">
+                            <div className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap bg-black p-4 rounded-xl border border-border">
+                              {aiData.summary.summary}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ) : (
+                        <div className="text-center py-16 bg-card border border-dashed border-border rounded-2xl p-6">
+                          <Sparkles className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                          <h3 className="text-base font-bold text-white mb-1">No Summary Generated Yet</h3>
+                          <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">
+                            Extract obligations, milestones, expiration dates, and key considerations in one glance.
+                          </p>
+                          <Button onClick={() => handleAiAction("summarize")} className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 text-black text-xs h-9 px-4 rounded-xl font-bold">
+                            Generate Executive Summary
+                          </Button>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {/* Original Text Tab */}
                   {activeTab === "original" && (
                     <motion.div
                       key="original"
@@ -425,10 +466,14 @@ export default function DocumentDetail() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                     >
-                      <Card className="bg-slate-900 border-white/5 overflow-hidden">
-                        <ScrollArea className="h-[600px] w-full p-6">
-                          <div className="text-slate-400 text-sm leading-relaxed whitespace-pre-wrap font-mono">
-                            {(selectedDocument as any).originalText}
+                      <Card className="bg-card border-border backdrop-blur-md overflow-hidden">
+                        <div className="p-3.5 bg-black border-b border-border flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Raw Contract Content</span>
+                          <span className="font-mono text-amber-400">{wordCount} words</span>
+                        </div>
+                        <ScrollArea className="h-[550px] w-full p-6">
+                          <div className="text-slate-300 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-mono select-text">
+                            {(selectedDocument as any).originalText || "No text content available."}
                           </div>
                         </ScrollArea>
                       </Card>
@@ -439,65 +484,68 @@ export default function DocumentDetail() {
             </Tabs>
           </div>
 
-          {/* Sidebar Info Column */}
-          <div className="lg:col-span-4 space-y-6">
-            <Card className="bg-slate-900 border-white/5 overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-500/20 to-purple-600/20 p-4 border-b border-white/5">
-                <h3 className="font-bold text-white flex items-center gap-2">
-                  <Info className="w-4 h-4 text-blue-400" />
-                  Quick Summary
-                </h3>
+          {/* Right Rail Info Column */}
+          <div className="lg:col-span-4 space-y-5">
+            {/* Metadata Card */}
+            <Card className="bg-card border-border backdrop-blur-md p-5 space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-border">
+                <Info className="w-4 h-4 text-amber-400" />
+                <h3 className="font-bold text-white text-sm">Contract Details</h3>
               </div>
-              <CardContent className="p-6 space-y-4">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">Document Type</span>
-                  <span className="text-slate-200 capitalize">{selectedDocument.documentType}</span>
+              <div className="space-y-2.5 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Document Type</span>
+                  <span className="text-white capitalize font-semibold">{selectedDocument.documentType || "Contract"}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">File Size</span>
-                  <span className="text-slate-200">{(selectedDocument as any).fileSize ? ((selectedDocument as any).fileSize / 1024).toFixed(1) + ' KB' : 'N/A'}</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Version</span>
+                  <span className="text-white font-mono">v{selectedDocument.version || 1}.0</span>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">Text Extraction</span>
-                  <span className="text-green-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Success
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Indexed On</span>
+                  <span className="text-white">{new Date(selectedDocument.uploadedAt).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Parser Status</span>
+                  <span className="text-amber-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Indexed
                   </span>
                 </div>
-                <div className="w-full h-[1px] bg-white/5" />
-                <p className="text-xs text-slate-500 italic">
-                  This document was analyzed by LegalSenser AI on {new Date().toLocaleDateString()}. AI results may vary in accuracy.
-                </p>
-              </CardContent>
+              </div>
             </Card>
 
-            <Card className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 border-white/5 border overflow-hidden">
-              <CardHeader>
-                <CardTitle className="text-lg text-white">Compare Document</CardTitle>
-                <CardDescription>Upload a newer version to see changes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link to="/compare">
-                  <Button variant="outline" className="w-full bg-white/5 border-white/10 hover:bg-white/10 text-white">
-                    Compare Versions
-                  </Button>
-                </Link>
-              </CardContent>
+            {/* Compare Versions Card */}
+            <Card className="bg-card border border-border backdrop-blur-md p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <GitCompare className="w-4 h-4 text-amber-400" />
+                <h3 className="font-bold text-white text-sm">Compare Redlines</h3>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                Compare this contract with another version or counterparty redline.
+              </p>
+              <Link to="/compare">
+                <Button variant="outline" size="sm" className="w-full text-xs border-border hover:border-amber-500/50 hover:bg-amber-500/10 text-white rounded-xl font-bold">
+                  Open Comparison Tool
+                </Button>
+              </Link>
             </Card>
 
-            <Card className="bg-red-500/5 border-red-500/10 border p-4">
+            {/* Danger Zone */}
+            <Card className="bg-destructive/5 border-destructive/20 p-4">
               <Button 
                 variant="ghost" 
-                className="w-full text-red-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center gap-2"
+                size="sm"
+                onClick={handleDelete}
+                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10 text-xs gap-2 rounded-xl font-bold"
               >
-                <Trash2 className="w-4 h-4" />
-                Delete Document
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Contract from Repository
               </Button>
             </Card>
           </div>
-
         </div>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
