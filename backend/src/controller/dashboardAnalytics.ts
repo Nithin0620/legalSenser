@@ -1,28 +1,42 @@
 import { Request, Response } from "express";
 import User from "../models/user";
 import Profile from "../models/profile";
-import Document from "../models/document";
 import RecentActivity from "../models/recentActivity";
+
+/**
+ * Helper to safely extract user ID from protectRoute request
+ */
+const getUserId = (req: Request): string | null => {
+    return (req as any).user?._id || (req as any).user?.user?._id || null;
+};
 
 export const getSavedDocuments = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?._id;
+        const userId = getUserId(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+
         const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: "User not found" });
+        if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+        if (!user.profile) {
+            return res.json({ success: true, savedDocuments: [] });
+        }
 
         const profile = await Profile.findById(user.profile).populate("savedDocuments");
-        if (!profile) return res.status(404).json({ message: "Profile not found" });
+        if (!profile) return res.status(404).json({ success: false, message: "Profile not found" });
 
-        res.json({ success: true, savedDocuments: profile.savedDocuments });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server Error" });
+        res.json({ success: true, savedDocuments: profile.savedDocuments || [] });
+    } catch (error: any) {
+        console.error("Error in getSavedDocuments:", error.message || error);
+        res.status(500).json({ success: false, message: "Server Error" });
     }
 };
 
 export const getRecentActivity = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?.user?._id;
+        const userId = getUserId(req);
         const { limit = 20, skip = 0 } = req.query;
 
         if (!userId) {
@@ -51,28 +65,39 @@ export const getRecentActivity = async (req: Request, res: Response) => {
                 hasMore: total > Number(skip) + Number(limit)
             }
         });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server Error" });
+    } catch (error: any) {
+        console.error("Error in getRecentActivity:", error.message || error);
+        res.status(500).json({ success: false, message: "Server Error" });
     }
 };
 
 export const getUsageStats = async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user?._id;
+        const userId = getUserId(req);
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+
         const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: "User not found" });
+        if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+        if (!user.profile) {
+            return res.json({
+                savedDocuments: {},
+                recentActivity: {},
+            });
+        }
 
         const profile = await Profile.findById(user.profile)
             .populate("savedDocuments")
             .populate("recentActivity");
 
-        if (!profile) return res.status(404).json({ message: "Profile not found" });
+        if (!profile) return res.status(404).json({ success: false, message: "Profile not found" });
 
         const countByType = (docs: any[]) => {
             const stats: Record<string, number> = {};
             docs.forEach((doc) => {
-                const type = doc.documentType || "unknown";
+                const type = doc?.documentType || "unknown";
                 stats[type] = (stats[type] || 0) + 1;
             });
             return stats;
@@ -85,10 +110,8 @@ export const getUsageStats = async (req: Request, res: Response) => {
             savedDocuments: savedStats,
             recentActivity: recentStats,
         });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server Error" });
+    } catch (error: any) {
+        console.error("Error in getUsageStats:", error.message || error);
+        res.status(500).json({ success: false, message: "Server Error" });
     }
 };
-
-

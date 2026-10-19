@@ -5,7 +5,6 @@ import {
   MessageSquare,
   Activity,
   Clock,
-  TrendingUp,
   Plus,
   Loader,
   RefreshCw,
@@ -19,7 +18,6 @@ import {
 import { useDocumentStore } from "@/store/documentStore";
 import { useAuthStore } from "@/store/authStore";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 
@@ -42,7 +40,7 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDocuments();
     fetchRecentActivity();
-  }, [fetchDocuments, fetchRecentActivity]);
+  }, []);
 
   useEffect(() => {
     if (recentActivity) {
@@ -129,11 +127,7 @@ export default function Dashboard() {
     <AppLayout>
       <div className="space-y-8">
         {/* Welcome Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -15 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-border/60"
-        >
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-border/60">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-xs font-bold text-amber-400 mb-3">
               <Sparkles className="w-3.5 h-3.5" />
@@ -154,18 +148,15 @@ export default function Dashboard() {
               </Button>
             </Link>
           </div>
-        </motion.div>
+        </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {statCards.map((card, index) => {
             const Icon = card.icon;
             return (
-              <motion.div
+              <div
                 key={index}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 + index * 0.05 }}
                 className={`relative overflow-hidden rounded-2xl bg-card border ${card.border} p-5 hover:border-amber-500/50 transition-all duration-300 shadow-sm`}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${card.color} pointer-events-none`} />
@@ -179,7 +170,7 @@ export default function Dashboard() {
                     <Icon className="w-5 h-5" />
                   </div>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
         </div>
@@ -187,12 +178,7 @@ export default function Dashboard() {
         {/* Quick Actions & Recent Documents Split */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Recent Contracts Library Preview */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-8 bg-card border border-border/80 rounded-2xl p-6 backdrop-blur-md flex flex-col justify-between"
-          >
+          <div className="lg:col-span-8 bg-card border border-border/80 rounded-2xl p-6 backdrop-blur-sm flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-4 mb-4 border-b border-border/60">
                 <div className="flex items-center gap-2.5">
@@ -230,7 +216,7 @@ export default function Dashboard() {
                               {doc.documentType || "Contract"}
                             </span>
                             <span>•</span>
-                            <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
+                            <span>{new Date(doc.uploadedAt || (doc as any).createdAt || Date.now()).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </div>
@@ -270,16 +256,11 @@ export default function Dashboard() {
               <span>Security Guarantee: Zero data training on uploaded contracts.</span>
               <span className="text-amber-400 font-bold">SOC-2 Type II Certified</span>
             </div>
-          </motion.div>
+          </div>
 
           {/* Quick Actions Shortcuts */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
-            className="lg:col-span-4 space-y-4"
-          >
-            <div className="bg-card border border-border/80 rounded-2xl p-6 backdrop-blur-md">
+          <div className="lg:col-span-4 space-y-4">
+            <div className="bg-card border border-border/80 rounded-2xl p-6 backdrop-blur-sm">
               <h2 className="text-lg font-bold text-white mb-1">AI Tool Suite</h2>
               <p className="text-xs text-muted-foreground mb-4">Instant workflows for legal analysis</p>
               
@@ -334,16 +315,11 @@ export default function Dashboard() {
                 })}
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
 
         {/* Live Audit Log & System Activity */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-card border border-border/80 rounded-2xl p-6 backdrop-blur-md"
-        >
+        <div className="bg-card border border-border/80 rounded-2xl p-6 backdrop-blur-sm">
           <div className="flex items-center justify-between pb-4 mb-4 border-b border-border/60">
             <div className="flex items-center gap-2.5">
               <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-400">
@@ -403,7 +379,7 @@ export default function Dashboard() {
               <p className="text-[11px] text-muted-foreground mt-0.5">Upload a document or ask a question to generate audit entries.</p>
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
     </AppLayout>
   );
